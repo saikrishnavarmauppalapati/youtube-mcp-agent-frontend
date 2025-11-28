@@ -1,66 +1,54 @@
-const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+const BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-/* ---------------------- AUTH ---------------------- */
+// --- AUTH ---
 export async function getLoginUrl() {
-  const res = await fetch(`${BASE_URL}/auth/login-url`);
-  return res.json();
+  const res = await fetch(`${BASE}/auth/login`);
+  return res.json();  // returns { auth_url }
 }
 
 export async function getUserInfo() {
-  const res = await fetch(`${BASE_URL}/auth/me`, { credentials: "include" });
+  const res = await fetch(`${BASE}/auth/me`, { credentials: "include" });
   return res.json();
 }
 
 export async function logoutUser() {
-  const res = await fetch(`${BASE_URL}/auth/logout`, {
+  const res = await fetch(`${BASE}/auth/logout`, {
     method: "POST",
-    credentials: "include"
+    credentials: "include",
   });
   return res.json();
 }
 
-/* ---------------------- YOUTUBE ACTIONS ---------------------- */
+// --- YOUTUBE ACTIONS ---
 
 export async function fetchVideos(query: string) {
-  const res = await fetch(`${BASE_URL}/mcp/youtube/search`, {
+  const res = await fetch(`${BASE}/mcp/youtube/search`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ query })
+    body: JSON.stringify({ query }),
   });
-
   return res.json();
 }
 
 export async function likeVideo(videoId: string) {
-  const res = await fetch(`${BASE_URL}/mcp/youtube/like`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ videoId })
-  });
-
+  const res = await fetch(`${BASE}/mcp/youtube/like/${videoId}`, { method: "POST" });
   return res.json();
 }
 
 export async function commentVideo(videoId: string, text: string) {
-  const res = await fetch(`${BASE_URL}/mcp/youtube/comment`, {
+  const res = await fetch(`${BASE}/mcp/youtube/comment`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ videoId, text })
+    body: JSON.stringify({ video_id: videoId, text }),
   });
-
   return res.json();
 }
 
 export async function subscribeChannel(channelId: string) {
-  const res = await fetch(`${BASE_URL}/mcp/youtube/subscribe`, {
+  const res = await fetch(`${BASE}/mcp/youtube/subscribe`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ channelId })
+    body: JSON.stringify({ channel_id: channelId }),
   });
-
   return res.json();
 }
