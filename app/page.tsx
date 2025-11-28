@@ -63,6 +63,7 @@ export default function Home() {
     alert("Failed to get login URL");
   }
 }
+
   async function handleLogout() {
     await logoutUser();
     setUser(null);
