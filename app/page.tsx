@@ -11,7 +11,7 @@ import {
   logoutUser
 } from "../lib/api";
 
-// Simple toast notification
+// Simple toast
 function showToast(msg: string) {
   const el = document.createElement("div");
   el.innerText = msg;
@@ -33,37 +33,37 @@ export default function Home() {
   const [chatInput, setChatInput] = useState("");
   const [chatHistory, setChatHistory] = useState<{ user: string; bot: string }[]>([]);
 
-  // Load user info on mount
+  // Load user info
   useEffect(() => {
     async function loadUser() {
-      const u = await getUserInfo();
-      if (u && !u.error) setUser(u);
+      try {
+        const u = await getUserInfo();
+        if (!u.error) setUser(u);
+      } catch {
+        setUser(null);
+      }
     }
     loadUser();
   }, []);
 
   // Load default videos
   useEffect(() => {
-    loadVideos("technology");
+    async function loadDefault() {
+      const data = await fetchVideos("technology");
+      setVideos(data);
+    }
+    loadDefault();
   }, []);
 
-  // Load videos helper
-  async function loadVideos(query: string) {
-    const data = await fetchVideos(query);
-    setVideos(data);
-  }
-
-  // Login
   async function handleLogin() {
     const { url } = await getLoginUrl();
     if (url) {
       window.location.href = url;
     } else {
-      showToast("Failed to get login URL");
+      alert("Failed to get login URL");
     }
   }
 
-  // Logout
   async function handleLogout() {
     await logoutUser();
     setUser(null);
@@ -71,21 +71,9 @@ export default function Home() {
     setChatHistory([]);
   }
 
-  // Extract videoId from URL or ID
-  function extractVideoId(url: string) {
-    try {
-      const parsed = new URL(url);
-      return parsed.searchParams.get("v") || url;
-    } catch {
-      return url;
-    }
-  }
-
-  // Handle chatbot commands
   async function handleChatCommand(command: string) {
     if (!command.trim()) return;
-
-    setChatHistory(prev => [...prev, { user: command, bot: "Processing..." }]);
+    setChatHistory((prev) => [...prev, { user: command, bot: "Processing..." }]);
     const lower = command.toLowerCase();
 
     try {
@@ -93,30 +81,30 @@ export default function Home() {
         const query = command.replace(/search/i, "").trim();
         const data = await fetchVideos(query);
         setVideos(data);
-        setChatHistory(prev => [...prev.slice(0, -1), { user: command, bot: `Found ${data.length} videos for "${query}"` }]);
+        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: `Found ${data.length} videos for "${query}"` }]);
       } else if (lower.startsWith("like")) {
-        const videoId = extractVideoId(command.split(" ")[1]);
+        const videoId = command.split(" ")[1];
         const res = await likeVideo(videoId);
         showToast(res.status || "Liked!");
-        setChatHistory(prev => [...prev.slice(0, -1), { user: command, bot: res.status || "Liked!" }]);
+        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: res.status || "Liked!" }]);
       } else if (lower.startsWith("comment")) {
         const [_, videoId, ...textParts] = command.split(" ");
-        const text = textParts.join(" ");
-        if (!videoId || !text) throw new Error("Usage: comment <videoId> <text>");
-        const res = await commentVideo(videoId, text);
+        const commentText = textParts.join(" ");
+        if (!videoId || !commentText) throw new Error("Usage: comment <videoId> <text>");
+        const res = await commentVideo(videoId, commentText);
         showToast(res.status || "Comment posted!");
-        setChatHistory(prev => [...prev.slice(0, -1), { user: command, bot: res.status || "Comment posted!" }]);
+        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: res.status || "Comment posted!" }]);
       } else if (lower.startsWith("subscribe")) {
         const channelId = command.split(" ")[1];
         if (!channelId) throw new Error("Usage: subscribe <channelId>");
         const res = await subscribeChannel(channelId);
         showToast(res.status || "Subscribed!");
-        setChatHistory(prev => [...prev.slice(0, -1), { user: command, bot: res.status || "Subscribed!" }]);
+        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: res.status || "Subscribed!" }]);
       } else {
-        setChatHistory(prev => [...prev.slice(0, -1), { user: command, bot: "Unknown command" }]);
+        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: "Unknown command" }]);
       }
     } catch (err: any) {
-      setChatHistory(prev => [...prev.slice(0, -1), { user: command, bot: err.message || "Error" }]);
+      setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: err.message || "Error" }]);
       showToast(err.message || "Error executing command");
     }
 
@@ -125,13 +113,12 @@ export default function Home() {
 
   return (
     <div style={{ padding: 20, maxWidth: 900, margin: "auto" }}>
-      
       {/* Header */}
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1>YouTube MCP Agent</h1>
         <div>
           {!user ? (
-            <button onClick={handleLogin} style={{ background: "#4285F4", color: "#fff", padding: 10, borderRadius: 6 }}>
+            <button onClick={handleLogin} style={{ background: "#4285F4", color: "white", padding: 10, borderRadius: 6 }}>
               Login with Google
             </button>
           ) : (
@@ -141,7 +128,7 @@ export default function Home() {
                 <b>{user.name}</b>
                 <div style={{ fontSize: 12, color: "#555" }}>{user.email}</div>
               </div>
-              <button onClick={handleLogout} style={{ background: "#e53935", color: "#fff", padding: "8px 12px", borderRadius: 8 }}>
+              <button onClick={handleLogout} style={{ background: "#e53935", color: "white", padding: "8px 12px", borderRadius: 8 }}>
                 Logout
               </button>
             </div>
@@ -162,7 +149,7 @@ export default function Home() {
         </div>
         <input
           value={chatInput}
-          onChange={e => setChatInput(e.target.value)}
+          onChange={(e) => setChatInput(e.target.value)}
           placeholder="Type a command..."
           style={{ padding: 8, width: "70%" }}
         />
@@ -173,10 +160,10 @@ export default function Home() {
 
       {/* Video list */}
       <div style={{ marginTop: 30 }}>
-        {videos.map(v => (
+        {videos.map((v: any) => (
           <div key={v.videoId} style={{ marginBottom: 30, borderBottom: "1px solid #ddd", paddingBottom: 20 }}>
             <h2>{v.title}</h2>
-            <a href={`https://www.youtube.com/watch?v=${v.videoId}`} target="_blank" rel="noreferrer">
+            <a href={`https://www.youtube.com/watch?v=${v.videoId}`} target="_blank">
               <img src={v.thumbnail} width={320} height={180} style={{ borderRadius: 8 }} />
             </a>
             <p>{v.description}</p>
