@@ -1,9 +1,16 @@
-const BASE_URL = "https://your-backend.vercel.app"; // or your FastAPI backend
+const BASE_URL = " https://mcp-youtube-agent-xw94.onrender.com"; // replace with your backend URL
 
-export async function getLoginUrl() {
-  const res = await fetch(`${BASE_URL}/auth/login`);
-  const data = await res.json();
-  return { url: data.auth_url };
+export async function getLoginUrl(): Promise<{ url: string | null }> {
+  try {
+    const res = await fetch(`${BASE_URL}/auth/login`);
+    const data = await res.json();
+
+    // Backend returns { auth_url: "..." } so map it to { url: ... }
+    return { url: data.auth_url || null };
+  } catch (err) {
+    console.error("getLoginUrl error:", err);
+    return { url: null };
+  }
 }
 
 
