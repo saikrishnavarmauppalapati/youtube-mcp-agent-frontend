@@ -41,6 +41,14 @@ export async function subscribeChannel(channelId: string) {
   });
   return res.json();
 }
+export async function agentChat(message: string): Promise<{ bot: string }> {
+  const res = await fetch(`${BASE_URL}/mcp/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message }),
+  });
+  return res.json();
+}
 
 export async function getUserInfo() {
   const res = await fetch(`${BASE_URL}/auth/me`);
