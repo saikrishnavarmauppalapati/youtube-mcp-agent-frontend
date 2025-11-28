@@ -1,4 +1,4 @@
-const BASE = https://mcp-youtube-agent-xw94.onrender.com;
+const BASE = "https://mcp-youtube-agent-xw94.onrender.com";
 
 // --- AUTH ---
 export async function getLoginUrl() {
