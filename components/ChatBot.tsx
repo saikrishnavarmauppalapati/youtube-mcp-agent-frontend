@@ -1,161 +1,107 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { 
-  getLoginUrl,
+import { useState } from "react";
+import {
   fetchVideos,
   likeVideo,
   commentVideo,
   subscribeChannel,
-  getUserInfo,
-  logoutUser
+  getLoginUrl,
+  logoutUser,
 } from "../lib/api";
 
-/**
- * Props:
- *  - onSearch(results) : call to load videos in main UI
- *  - onActionResult(msg) : show alert or toast
- */
-export default function ChatBot({ onSearch, onActionResult }) {
+interface ChatBotProps {
+  onSearch: (q: string) => void;
+  onActionResult: (msg: string) => void;
+}
+
+export default function ChatBot({ onSearch, onActionResult }: ChatBotProps) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([
-    { from: "bot", text: "Hi — ask me to search videos or say 'like <videoId>' or 'comment <videoId> <text>'" },
+    { from: "bot", text: "Hi! Ask me to search videos or to like/comment/subscribe." }
   ]);
-  const [user, setUser] = useState(null); // user info after login
 
-  // Check login on mount
-  useEffect(() => {
-    async function loadUser() {
-      try {
-        const data = await getMe();
-        setUser(data);
-      } catch (err) {
-        setUser(null);
-      }
-    }
-    loadUser();
-  }, []);
+  function addMessage(from: string, text: string) {
+    setMessages((m) => [...m, { from, text }]);
+  }
 
-  async function send() {
+  async function handleSend() {
     if (!input.trim()) return;
-    const userMsg = input.trim();
-    setMessages((m) => [...m, { from: "user", text: userMsg }]);
+
+    const text = input.trim();
+    addMessage("user", text);
+
+    // --- commands ---
+    if (text.startsWith("search ")) {
+      const query = text.replace("search ", "");
+      onSearch(query);
+      addMessage("bot", `Searching for "${query}"...`);
+      setInput("");
+      return;
+    }
+
+    if (text.startsWith("like ")) {
+      const id = text.replace("like ", "");
+      const r = await likeVideo(id);
+      onActionResult(r.message || "Done");
+      addMessage("bot", "Liked the video!");
+      setInput("");
+      return;
+    }
+
+    if (text.startsWith("comment ")) {
+      const [, id, ...rest] = text.split(" ");
+      const comment = rest.join(" ");
+      const r = await commentVideo(id, comment);
+      onActionResult(r.message || "Comment added");
+      addMessage("bot", "Comment posted!");
+      setInput("");
+      return;
+    }
+
+    if (text.startsWith("subscribe ")) {
+      const id = text.replace("subscribe ", "");
+      const r = await subscribeChannel(id);
+      onActionResult(r.message || "Subscribed");
+      addMessage("bot", "Subscribed to channel!");
+      setInput("");
+      return;
+    }
+
+    if (text === "login") {
+      const { url } = await getLoginUrl();
+      window.location.href = url;
+      return;
+    }
+
+    if (text === "logout") {
+      await logoutUser();
+      addMessage("bot", "Logged out.");
+      return;
+    }
+
+    addMessage("bot", `I did not understand: "${text}"`);
     setInput("");
-
-    // First try agent (LLM) if available
-    const agentResp = await agentChat(userMsg);
-    if (!agentResp || agentResp.error) {
-      const fallback = await fallbackHandle(userMsg);
-      setMessages((m) => [...m, { from: "bot", text: fallback }]);
-    } else {
-      // handle agent actions
-      if (agentResp.action === "search" && agentResp.query) {
-        const results = await fetchVideos(agentResp.query); // search using YouTube API
-        onSearch(results);
-        setMessages((m) => [...m, { from: "bot", text: `Found ${results.length} videos for "${agentResp.query}"` }]);
-      } else if (agentResp.action === "like" && agentResp.videoId) {
-        const res = await likeVideo(agentResp.videoId);
-        setMessages((m) => [...m, { from: "bot", text: res?.status || "Liked!" }]);
-        onActionResult("Liked!");
-      } else {
-        setMessages((m) => [...m, { from: "bot", text: JSON.stringify(agentResp).slice(0, 400) }]);
-      }
-    }
-  }
-
-  async function fallbackHandle(text) {
-    const parts = text.split(" ");
-    const cmd = parts[0].toLowerCase();
-
-    if (cmd === "search") {
-      const q = parts.slice(1).join(" ") || "technology";
-      const results = await fetchVideos(q);
-      onSearch(results);
-      return `Found ${results.length} videos for "${q}"`;
-    }
-
-    if (cmd === "like") {
-      const vid = parts[1];
-      if (!vid) return "Usage: like <videoId>";
-      const r = await likeVideo(vid);
-      onActionResult("Liked!");
-      return "Liked ✅";
-    }
-
-    if (cmd === "comment") {
-      const vid = parts[1];
-      const txt = parts.slice(2).join(" ");
-      if (!vid || !txt) return "Usage: comment <videoId> <text>";
-      await commentVideo(vid, txt);
-      onActionResult("Comment posted!");
-      return "Comment posted ✅";
-    }
-
-    if (cmd === "subscribe") {
-      const ch = parts[1];
-      if (!ch) return "Usage: subscribe <channelId>";
-      await subscribeChannel(ch);
-      onActionResult("Subscribed!");
-      return "Subscribed ✅";
-    }
-
-    // Default: search
-    const results = await fetchVideos(text);
-    onSearch(results);
-    return `Found ${results.length} videos for "${text}"`;
-  }
-
-  async function handleLogout() {
-    await logout();
-    setUser(null);
-    onActionResult("Logged out");
   }
 
   return (
-    <div style={{ border: "1px solid #ddd", padding: 12, borderRadius: 8 }}>
-      <h3>Chatbot</h3>
-
-      {/* User info / login */}
-      <div style={{ marginBottom: 12 }}>
-        {user ? (
-          <div>
-            <span>Welcome, {user.name}</span>{" "}
-            <button onClick={handleLogout}>Logout</button>
-          </div>
-        ) : (
-          <a href="/auth/login">
-            <button>Login with Google</button>
-          </a>
-        )}
-      </div>
-
-      {/* Messages */}
-      <div style={{ height: 360, overflowY: "auto", padding: 8, background: "#fafafa", borderRadius: 6 }}>
+    <div className="border p-4 rounded-lg max-w-[500px]">
+      <div className="h-[250px] overflow-y-auto bg-gray-100 p-3 rounded">
         {messages.map((m, i) => (
-          <div key={i} style={{ marginBottom: 8, textAlign: m.from === "user" ? "right" : "left" }}>
-            <div
-              style={{
-                display: "inline-block",
-                padding: "6px 10px",
-                borderRadius: 6,
-                background: m.from === "user" ? "#DCF8C6" : "#eee",
-              }}
-            >
-              {m.text}
-            </div>
+          <div key={i} className={m.from === "bot" ? "text-blue-600" : "text-black"}>
+            <b>{m.from}:</b> {m.text}
           </div>
         ))}
       </div>
 
-      {/* Input */}
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+      <div className="flex gap-2 mt-3">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask: search cats / like VIDEOID / comment VIDEOID hello"
-          style={{ flex: 1, padding: 8 }}
+          className="flex-1 border p-2 rounded"
+          placeholder="Type a command..."
         />
-        <button onClick={send} style={{ padding: "8px 12px" }}>
+        <button onClick={handleSend} className="bg-blue-600 text-white px-3 rounded">
           Send
         </button>
       </div>
