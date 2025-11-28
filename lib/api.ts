@@ -1,10 +1,15 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://youtube-mcp-agent-backend.vercel.app";
+const BASE_URL = "https://your-backend.vercel.app"; // or your FastAPI backend
 
-// Login URL
-export async function getLoginUrl(): Promise<{ url: string }> {
-  const res = await fetch(`${BASE_URL}/auth/login`);
-  const data = await res.json();
-  return { url: data.auth_url }; // must match backend JSON key
+export async function getLoginUrl() {
+  try {
+    const res = await fetch(`${BASE_URL}/auth/login`);
+    const data = await res.json();
+    // data should have auth_url from backend
+    return { url: data.auth_url }; 
+  } catch (err) {
+    console.error(err);
+    return { url: null };
+  }
 }
 
 // Fetch videos
