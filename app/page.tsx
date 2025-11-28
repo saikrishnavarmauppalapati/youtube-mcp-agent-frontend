@@ -56,10 +56,13 @@ export default function Home() {
   }, []);
 
   async function handleLogin() {
-    const { url } = await getLoginUrl();
-    window.location.href = url;
+  const data = await getLoginUrl();
+  if (data?.url) {
+    window.location.href = data.url;
+  } else {
+    alert("Failed to get login URL");
   }
-
+}
   async function handleLogout() {
     await logoutUser();
     setUser(null);
