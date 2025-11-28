@@ -1,4 +1,4 @@
-const BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
+const BASE = https://mcp-youtube-agent-xw94.onrender.com;
 
 // --- AUTH ---
 export async function getLoginUrl() {
