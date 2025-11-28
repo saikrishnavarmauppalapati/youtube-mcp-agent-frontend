@@ -5,8 +5,9 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export async function getLoginUrl(): Promise<{ url: string }> {
   const res = await fetch(`${BASE_URL}/auth/login`);
   const data = await res.json();
-  return { url: data.auth_url };
+  return { url: data.auth_url }; // make sure `auth_url` exists
 }
+
 
 // Get logged in user
 export async function getUserInfo(): Promise<any> {
