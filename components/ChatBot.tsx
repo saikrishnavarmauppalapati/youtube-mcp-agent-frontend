@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { agentChat, fetchVideos, likeVideo, commentVideo, subscribeChannel, getMe, logout } from "../lib/api";
+import { 
+  getLoginUrl,
+  fetchVideos,
+  likeVideo,
+  commentVideo,
+  subscribeChannel,
+  getUserInfo,
+  logoutUser
+} from "../lib/api";
 
 /**
  * Props:
