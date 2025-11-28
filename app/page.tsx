@@ -11,6 +11,7 @@ import {
   logoutUser
 } from "../lib/api";
 
+
 // Simple toast
 function showToast(msg: string) {
   const el = document.createElement("div");
