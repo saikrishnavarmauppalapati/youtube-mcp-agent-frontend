@@ -11,7 +11,7 @@ import {
   logoutUser
 } from "../lib/api";
 
-// Simple toast notification
+// Simple toast
 function showToast(msg: string) {
   const el = document.createElement("div");
   el.innerText = msg;
@@ -29,24 +29,30 @@ function showToast(msg: string) {
 
 export default function Home() {
   const [videos, setVideos] = useState<any[]>([]);
-  const [search, setSearch] = useState("technology");
   const [user, setUser] = useState<any>(null);
   const [chatInput, setChatInput] = useState("");
   const [chatHistory, setChatHistory] = useState<{ user: string; bot: string }[]>([]);
 
-  async function loadVideos(query?: string) {
-    const data = await fetchVideos(query || search);
-    setVideos(data);
-  }
-
-  async function loadUser() {
-    const u = await getUserInfo();
-    if (u && !u.error) setUser(u);
-  }
-
+  // Load user info
   useEffect(() => {
-    loadVideos();
+    async function loadUser() {
+      try {
+        const u = await getUserInfo();
+        if (!u.error) setUser(u);
+      } catch {
+        setUser(null);
+      }
+    }
     loadUser();
+  }, []);
+
+  // Load default videos
+  useEffect(() => {
+    async function loadDefault() {
+      const data = await fetchVideos("technology");
+      setVideos(data);
+    }
+    loadDefault();
   }, []);
 
   async function handleLogin() {
@@ -56,79 +62,69 @@ export default function Home() {
 
   async function handleLogout() {
     await logoutUser();
-    window.location.reload();
+    setUser(null);
+    setVideos([]);
+    setChatHistory([]);
   }
 
-  // Extract videoId from URL or ID
-  function extractVideoId(url: string) {
-    try {
-      const parsed = new URL(url);
-      return parsed.searchParams.get("v") || url;
-    } catch {
-      return url;
-    }
-  }
-
-  // Chatbot command handler
   async function handleChatCommand(command: string) {
+    if (!command.trim()) return;
     setChatHistory((prev) => [...prev, { user: command, bot: "Processing..." }]);
     const lower = command.toLowerCase();
 
-    if (lower.includes("search")) {
-      const query = command.replace(/search/i, "").trim();
-      const data = await fetchVideos(query);
-      setVideos(data);
-      setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: `Found ${data.length} videos for "${query}"` }]);
-    } else if (lower.includes("like")) {
-      const parts = command.split(" ");
-      const videoId = extractVideoId(parts[parts.length - 1]);
-      const res = await likeVideo(videoId);
-      showToast(res.status || "Liked!");
-      setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: res.status || "Liked!" }]);
-    } else if (lower.includes("comment")) {
-      const match = command.match(/comment (.+)/i);
-      if (match) {
-        const commentText = match[1];
-        const lastVideo = videos[0]; // default: first video
-        if (lastVideo) {
-          const res = await commentVideo(lastVideo.videoId, commentText);
-          showToast(res.status || "Comment posted!");
-          setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: res.status || "Comment posted!" }]);
-        }
-      }
-    } else if (lower.includes("subscribe")) {
-      const channelId = videos[0]?.channelId;
-      if (channelId) {
+    try {
+      if (lower.startsWith("search")) {
+        const query = command.replace(/search/i, "").trim();
+        const data = await fetchVideos(query);
+        setVideos(data);
+        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: `Found ${data.length} videos for "${query}"` }]);
+      } else if (lower.startsWith("like")) {
+        const videoId = command.split(" ")[1];
+        const res = await likeVideo(videoId);
+        showToast(res.status || "Liked!");
+        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: res.status || "Liked!" }]);
+      } else if (lower.startsWith("comment")) {
+        const [_, videoId, ...textParts] = command.split(" ");
+        const commentText = textParts.join(" ");
+        if (!videoId || !commentText) throw new Error("Usage: comment <videoId> <text>");
+        const res = await commentVideo(videoId, commentText);
+        showToast(res.status || "Comment posted!");
+        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: res.status || "Comment posted!" }]);
+      } else if (lower.startsWith("subscribe")) {
+        const channelId = command.split(" ")[1];
+        if (!channelId) throw new Error("Usage: subscribe <channelId>");
         const res = await subscribeChannel(channelId);
         showToast(res.status || "Subscribed!");
         setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: res.status || "Subscribed!" }]);
+      } else {
+        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: "Unknown command" }]);
       }
-    } else {
-      setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: "Unknown command" }]);
+    } catch (err: any) {
+      setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: err.message || "Error" }]);
+      showToast(err.message || "Error executing command");
     }
 
     setChatInput("");
   }
 
   return (
-    <div style={{ padding: "20px", maxWidth: 900, margin: "auto" }}>
-
-      {/* HEADER */}
+    <div style={{ padding: 20, maxWidth: 900, margin: "auto" }}>
+      {/* Header */}
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1>YouTube MCP Agent</h1>
         <div>
           {!user ? (
-            <button onClick={handleLogin} style={{ background: "#4285F4", color: "white", padding: "10px", borderRadius: "6px" }}>
+            <button onClick={handleLogin} style={{ background: "#4285F4", color: "white", padding: 10, borderRadius: 6 }}>
               Login with Google
             </button>
           ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <img src={user.picture} width={40} height={40} style={{ borderRadius: "50%" }} />
               <div>
                 <b>{user.name}</b>
                 <div style={{ fontSize: 12, color: "#555" }}>{user.email}</div>
               </div>
-              <button onClick={handleLogout} style={{ background: "#e53935", color: "white", padding: "8px 12px", borderRadius: "8px" }}>
+              <button onClick={handleLogout} style={{ background: "#e53935", color: "white", padding: "8px 12px", borderRadius: 8 }}>
                 Logout
               </button>
             </div>
@@ -136,7 +132,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* CHATBOT */}
+      {/* Chatbot */}
       <div style={{ marginTop: 20, border: "1px solid #ccc", borderRadius: 8, padding: 15 }}>
         <h2>ChatBot</h2>
         <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 10 }}>
@@ -153,17 +149,12 @@ export default function Home() {
           placeholder="Type a command..."
           style={{ padding: 8, width: "70%" }}
         />
-        <button
-          onClick={() => handleChatCommand(chatInput)}
-          style={{ marginLeft: 10, padding: 8, cursor: "pointer" }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#ddd")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "")}
-        >
+        <button onClick={() => handleChatCommand(chatInput)} style={{ marginLeft: 10, padding: 8 }}>
           Send
         </button>
       </div>
 
-      {/* VIDEO LIST */}
+      {/* Video list */}
       <div style={{ marginTop: 30 }}>
         {videos.map((v: any) => (
           <div key={v.videoId} style={{ marginBottom: 30, borderBottom: "1px solid #ddd", paddingBottom: 20 }}>
@@ -172,33 +163,9 @@ export default function Home() {
               <img src={v.thumbnail} width={320} height={180} style={{ borderRadius: 8 }} />
             </a>
             <p>{v.description}</p>
-            <button
-              onClick={async () => { const res = await likeVideo(v.videoId); showToast(res.status || "Liked!"); }}
-              style={{ marginRight: 10, padding: 8, cursor: "pointer" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#ddd")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "")}
-            >
-              👍 Like
-            </button>
-	    <button
-              onClick={async () => {
-              const userComment = prompt("Enter your comment:"); // prompt for comment
-              if (!userComment) return; // if empty, do nothing
-              const res = await commentVideo(v.videoId, userComment);
-              alert(res.status); // show toast/alert for success or failure
-              }}
-              style={{ marginLeft: 10 }}
-            >
-              💬 Comment
-	    </button>
-            <button
-              onClick={async () => { const res = await subscribeChannel(v.channelId); showToast(res.status || "Subscribed!"); }}
-              style={{ padding: 8, cursor: "pointer" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#ddd")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "")}
-            >
-              🔔 Subscribe
-            </button>
+            <button onClick={async () => { const res = await likeVideo(v.videoId); showToast(res.status || "Liked!"); }} style={{ marginRight: 10, padding: 8 }}>👍 Like</button>
+            <button onClick={async () => { const comment = prompt("Enter comment:"); if (!comment) return; const res = await commentVideo(v.videoId, comment); showToast(res.status || "Comment posted!"); }} style={{ marginRight: 10, padding: 8 }}>💬 Comment</button>
+            <button onClick={async () => { const res = await subscribeChannel(v.channelId); showToast(res.status || "Subscribed!"); }} style={{ padding: 8 }}>🔔 Subscribe</button>
           </div>
         ))}
       </div>
