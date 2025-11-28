@@ -1,11 +1,12 @@
-const BASE_URL = " https://mcp-youtube-agent-xw94.onrender.com"; // replace with your backend URL
+const BASE_URL = "https://mcp-youtube-agent-xw94.onrender.com"; // replace with your backend URL
 
+// ----------------------------
+// LOGIN
+// ----------------------------
 export async function getLoginUrl(): Promise<{ url: string | null }> {
   try {
     const res = await fetch(`${BASE_URL}/auth/login`);
     const data = await res.json();
-
-    // Backend returns { auth_url: "..." } so map it to { url: ... }
     return { url: data.auth_url || null };
   } catch (err) {
     console.error("getLoginUrl error:", err);
@@ -13,56 +14,110 @@ export async function getLoginUrl(): Promise<{ url: string | null }> {
   }
 }
 
-
-// Fetch videos
+// ----------------------------
+// VIDEO SEARCH
+// ----------------------------
 export async function fetchVideos(query: string): Promise<any[]> {
-  const res = await fetch(`${BASE_URL}/mcp/youtube/search`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query }),
-  });
-  const data = await res.json();
-  return data.results || [];
+  try {
+    const res = await fetch(`${BASE_URL}/mcp/youtube/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    });
+    const data = await res.json();
+    return data.results || [];
+  } catch (err) {
+    console.error("fetchVideos error:", err);
+    return [];
+  }
 }
 
-// Other actions
+// ----------------------------
+// LIKE VIDEO
+// ----------------------------
 export async function likeVideo(videoId: string) {
-  const res = await fetch(`${BASE_URL}/mcp/youtube/like/${videoId}`, { method: "POST" });
-  return res.json();
+  try {
+    const res = await fetch(`${BASE_URL}/mcp/youtube/like/${videoId}`, { method: "POST" });
+    return res.json();
+  } catch (err) {
+    console.error("likeVideo error:", err);
+    return { status: "error" };
+  }
 }
 
+// ----------------------------
+// COMMENT VIDEO
+// ----------------------------
 export async function commentVideo(videoId: string, text: string) {
-  const res = await fetch(`${BASE_URL}/mcp/youtube/comment`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ video_id: videoId, text }),
-  });
-  return res.json();
+  try {
+    const res = await fetch(`${BASE_URL}/mcp/youtube/comment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ video_id: videoId, text }),
+    });
+    return res.json();
+  } catch (err) {
+    console.error("commentVideo error:", err);
+    return { status: "error" };
+  }
 }
 
+// ----------------------------
+// SUBSCRIBE CHANNEL
+// ----------------------------
 export async function subscribeChannel(channelId: string) {
-  const res = await fetch(`${BASE_URL}/mcp/youtube/subscribe`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ channel_id: channelId }),
-  });
-  return res.json();
+  try {
+    const res = await fetch(`${BASE_URL}/mcp/youtube/subscribe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel_id: channelId }),
+    });
+    return res.json();
+  } catch (err) {
+    console.error("subscribeChannel error:", err);
+    return { status: "error" };
+  }
 }
+
+// ----------------------------
+// AGENT CHAT (optional if backend supports it)
+// ----------------------------
 export async function agentChat(message: string): Promise<{ bot: string }> {
-  const res = await fetch(`${BASE_URL}/mcp/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message }),
-  });
-  return res.json();
+  try {
+    const res = await fetch(`${BASE_URL}/mcp/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    });
+    return res.json();
+  } catch (err) {
+    console.error("agentChat error:", err);
+    return { bot: "Error" };
+  }
 }
 
+// ----------------------------
+// USER INFO
+// ----------------------------
 export async function getUserInfo() {
-  const res = await fetch(`${BASE_URL}/auth/me`);
-  return res.json();
+  try {
+    const res = await fetch(`${BASE_URL}/auth/me`);
+    return res.json();
+  } catch (err) {
+    console.error("getUserInfo error:", err);
+    return null;
+  }
 }
 
+// ----------------------------
+// LOGOUT
+// ----------------------------
 export async function logoutUser() {
-  const res = await fetch(`${BASE_URL}/auth/logout`, { method: "POST" });
-  return res.json();
+  try {
+    const res = await fetch(`${BASE_URL}/auth/logout`, { method: "POST" });
+    return res.json();
+  } catch (err) {
+    console.error("logoutUser error:", err);
+    return { status: "error" };
+  }
 }
