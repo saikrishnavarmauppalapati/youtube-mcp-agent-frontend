@@ -1,28 +1,23 @@
 // lib/api.ts
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://your-backend-domain.com";
 
-export async function getLoginUrl() {
+export async function getLoginUrl(): Promise<{ url: string }> {
   const res = await fetch(`${BASE_URL}/auth/login`);
   const data = await res.json();
   return { url: data.auth_url };
 }
 
-export async function getUserInfo() {
-  const res = await fetch(`${BASE_URL}/auth/me`, {
-    credentials: "include",
-  });
+export async function getMe(): Promise<any> {
+  const res = await fetch(`${BASE_URL}/auth/me`, { credentials: "include" });
   if (!res.ok) return { error: "not_authenticated" };
   return res.json();
 }
 
-export async function logoutUser() {
-  await fetch(`${BASE_URL}/auth/logout`, {
-    method: "POST",
-    credentials: "include",
-  });
+export async function logout(): Promise<void> {
+  await fetch(`${BASE_URL}/auth/logout`, { method: "POST", credentials: "include" });
 }
 
-export async function fetchVideos(query: string) {
+export async function fetchVideos(query: string): Promise<any[]> {
   const res = await fetch(`${BASE_URL}/mcp/youtube/search`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -33,7 +28,7 @@ export async function fetchVideos(query: string) {
   return data.results || [];
 }
 
-export async function likeVideo(videoId: string) {
+export async function likeVideo(videoId: string): Promise<any> {
   const res = await fetch(`${BASE_URL}/mcp/youtube/like/${videoId}`, {
     method: "POST",
     credentials: "include",
@@ -42,7 +37,7 @@ export async function likeVideo(videoId: string) {
   return res.json();
 }
 
-export async function commentVideo(videoId: string, text: string) {
+export async function commentVideo(videoId: string, text: string): Promise<any> {
   const res = await fetch(`${BASE_URL}/mcp/youtube/comment`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -53,7 +48,7 @@ export async function commentVideo(videoId: string, text: string) {
   return res.json();
 }
 
-export async function subscribeChannel(channelId: string) {
+export async function subscribeChannel(channelId: string): Promise<any> {
   const res = await fetch(`${BASE_URL}/mcp/youtube/subscribe`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -62,4 +57,9 @@ export async function subscribeChannel(channelId: string) {
   });
   if (!res.ok) return { status: "Failed to subscribe" };
   return res.json();
+}
+
+export async function agentChat(prompt: string): Promise<any> {
+  // Placeholder for LLM backend call
+  return { action: "search", query: prompt };
 }
