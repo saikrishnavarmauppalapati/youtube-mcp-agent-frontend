@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { 
-  agentChat, 
-  fetchVideos, 
-  likeVideo, 
-  commentVideo, 
-  subscribeChannel, 
-  getUserInfo, 
-  logoutUser 
+  getLoginUrl,
+  fetchVideos,
+  likeVideo,
+  commentVideo,
+  subscribeChannel,
+  getUserInfo,
+  logoutUser
 } from "../lib/api";
 
 // Simple toast
@@ -56,9 +56,14 @@ export default function Home() {
   }, []);
 
   async function handleLogin() {
-    const { url } = await getLoginUrl();
+  const { url } = await getLoginUrl();
+  if (url) {
     window.location.href = url;
+  } else {
+    alert("Failed to get login URL");
   }
+}
+
 
   async function handleLogout() {
     await logoutUser();
