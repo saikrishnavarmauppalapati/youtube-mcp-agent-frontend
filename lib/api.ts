@@ -1,15 +1,9 @@
 const BASE_URL = "https://your-backend.vercel.app"; // or your FastAPI backend
 
-export async function getLoginUrl(): Promise<{ url: string | null }> {
-  try {
-    const res = await fetch(`${BASE_URL}/auth/login`);
-    const data = await res.json();
-    // backend returns { auth_url: "..." }, so we map it
-    return { url: data.auth_url || null };
-  } catch (err) {
-    console.error("getLoginUrl error:", err);
-    return { url: null };
-  }
+export async function getLoginUrl() {
+  const res = await fetch(`${BASE_URL}/auth/login`);
+  const data = await res.json();
+  return { url: data.auth_url };
 }
 
 
