@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  fetchVideos,
-  getLoginUrl,
-  likeVideo,
-  commentVideo,
-  subscribeChannel,
-  getUserInfo,
-  logoutUser
+import { 
+  agentChat, 
+  fetchVideos, 
+  likeVideo, 
+  commentVideo, 
+  subscribeChannel, 
+  getUserInfo, 
+  logoutUser 
 } from "../lib/api";
 
 // Simple toast
