@@ -1,223 +1,245 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { 
-  getLoginUrl,
-  fetchVideos,
-  likeVideo,
-  commentVideo,
-  subscribeChannel,
-  getUserInfo,
-  logoutUser
-} from "../lib/api";
+import { useEffect, useState } from "react";
 
-// Simple toast
-function showToast(msg: string) {
-  const el = document.createElement("div");
-  el.innerText = msg;
-  el.style.position = "fixed";
-  el.style.bottom = "20px";
-  el.style.right = "20px";
-  el.style.background = "#333";
-  el.style.color = "#fff";
-  el.style.padding = "10px 15px";
-  el.style.borderRadius = "6px";
-  el.style.zIndex = "9999";
-  document.body.appendChild(el);
-  setTimeout(() => document.body.removeChild(el), 3000);
-}
+export default function Page() {
+  const BACKEND = "https://mcp-youtube-agent-xw94.onrender.com";
 
-export default function Home() {
-  const [videos, setVideos] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
-  const [chatInput, setChatInput] = useState("");
-  const [chatHistory, setChatHistory] = useState<{ user: string; bot: string }[]>([]);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Load user info
-  useEffect(() => {
-    async function loadUser() {
-      try {
-        const u = await getUserInfo();
-        if (!u.error) setUser(u);
-      } catch {
+  // -----------------------------
+  // Fetch logged-in user
+  // -----------------------------
+  const fetchUser = async () => {
+    try {
+      const res = await fetch(`${BACKEND}/auth/me`);
+      if (res.status === 200) {
+        const data = await res.json();
+        setUser(data);
+      } else {
         setUser(null);
       }
+    } catch (e) {
+      setUser(null);
     }
-    loadUser();
-  }, []);
+  };
 
-  // Load default videos
   useEffect(() => {
-    async function loadDefault() {
-      const data = await fetchVideos("technology");
-      setVideos(data);
-    }
-    loadDefault();
+    fetchUser();
   }, []);
 
-  async function handleLogin() {
-    const { auth_url } = await getLoginUrl();
-    if (auth_url) {
-      window.location.href = auth_url;
-    } else {
-      alert("Failed to get login URL");
-    }
-  }
+  // -----------------------------
+  // Login
+  // -----------------------------
+  const login = async () => {
+    const res = await fetch(`${BACKEND}/auth/login`);
+    const data = await res.json();
+    window.location.href = data.auth_url;
+  };
 
-  async function handleLogout() {
-    await logoutUser();
+  // -----------------------------
+  // Logout
+  // -----------------------------
+  const logout = async () => {
+    await fetch(`${BACKEND}/auth/logout`, { method: "POST" });
     setUser(null);
-    setVideos([]);
-    setChatHistory([]);
-  }
+  };
 
-  async function handleChatCommand(command: string) {
-    if (!command.trim()) return;
-    setChatHistory((prev) => [...prev, { user: command, bot: "Processing..." }]);
-    const lower = command.toLowerCase();
+  // -----------------------------
+  // Video Search
+  // -----------------------------
+  const searchVideos = async () => {
+    setLoading(true);
 
-    try {
-      if (lower.startsWith("search")) {
-        const query = command.replace(/search/i, "").trim();
-        const data = await fetchVideos(query);
-        setVideos(data);
-        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: `Found ${data.length} videos for "${query}"` }]);
-      } else if (lower.startsWith("like")) {
-        const videoId = command.split(" ")[1];
-        const res = await likeVideo(videoId);
-        showToast(res.status || "Liked!");
-        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: res.status || "Liked!" }]);
-      } else if (lower.startsWith("comment")) {
-        const [_, videoId, ...textParts] = command.split(" ");
-        const commentText = textParts.join(" ");
-        if (!videoId || !commentText) throw new Error("Usage: comment <videoId> <text>");
-        const res = await commentVideo(videoId, commentText);
-        showToast(res.status || "Comment posted!");
-        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: res.status || "Comment posted!" }]);
-      } else if (lower.startsWith("subscribe")) {
-        const channelId = command.split(" ")[1];
-        if (!channelId) throw new Error("Usage: subscribe <channelId>");
-        const res = await subscribeChannel(channelId);
-        showToast(res.status || "Subscribed!");
-        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: res.status || "Subscribed!" }]);
-      } else {
-        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: "Unknown command" }]);
-      }
-    } catch (err: any) {
-      setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: err.message || "Error" }]);
-      showToast(err.message || "Error executing command");
+    const res = await fetch(`${BACKEND}/mcp/youtube/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    });
+
+    const data = await res.json();
+    setResults(data.results || []);
+    setLoading(false);
+  };
+
+  // -----------------------------
+  // Protected Action Check
+  // -----------------------------
+  const requireLogin = () => {
+    if (!user) {
+      alert("Please login to continue.");
+      return false;
     }
+    return true;
+  };
 
-    setChatInput("");
-  }
+  // -----------------------------
+  // Like
+  // -----------------------------
+  const likeVideo = async (videoId: string) => {
+    if (!requireLogin()) return;
+
+    await fetch(`${BACKEND}/mcp/youtube/like/${videoId}`, { method: "POST" });
+    alert("Video liked!");
+  };
+
+  // -----------------------------
+  // Comment
+  // -----------------------------
+  const commentVideo = async (videoId: string) => {
+    if (!requireLogin()) return;
+
+    await fetch(`${BACKEND}/mcp/youtube/comment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        video_id: videoId,
+        text: commentText,
+      }),
+    });
+
+    alert("Comment added!");
+    setCommentText("");
+  };
+
+  // -----------------------------
+  // Subscribe
+  // -----------------------------
+  const subscribe = async (channelId: string) => {
+    if (!requireLogin()) return;
+
+    await fetch(`${BACKEND}/mcp/youtube/subscribe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel_id: channelId }),
+    });
+
+    alert("Subscribed successfully!");
+  };
+
+  // -----------------------------
+  // Button Styles
+  // -----------------------------
+  const btn =
+    "px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 transition-all";
+
+  const btnDanger =
+    "px-4 py-2 rounded-md bg-red-600 text-white font-medium hover:bg-red-700 transition-all";
+
+  const btnGreen =
+    "px-4 py-2 rounded-md bg-green-600 text-white font-medium hover:bg-green-700 transition-all";
 
   return (
-    <div style={{ padding: 20, maxWidth: 900, margin: "auto" }}>
-      
-      {/* Header */}
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1>YouTube MCP Agent</h1>
-        <div>
-          {!user ? (
-            <button onClick={handleLogin} style={{ background: "#4285F4", color: "white", padding: 10, borderRadius: 6 }}>
-              Login with Google
-            </button>
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <img src={user.picture} width={40} height={40} style={{ borderRadius: "50%" }} />
-              <div>
-                <b>{user.name}</b>
-                <div style={{ fontSize: 12, color: "#555" }}>{user.email}</div>
-              </div>
-              <button onClick={handleLogout} style={{ background: "#e53935", color: "white", padding: "8px 12px", borderRadius: 8 }}>
-                Logout
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
+    <div className="p-10 max-w-3xl mx-auto">
+      <h1 className="text-3xl font-bold mb-5">🎬 YouTube MCP Agent</h1>
 
-      {/* Chatbot */}
-      <div style={{ marginTop: 20, border: "1px solid #ccc", borderRadius: 8, padding: 15 }}>
-        <h2>ChatBot</h2>
-        <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 10 }}>
-          {chatHistory.map((c, i) => (
-            <div key={i} style={{ marginBottom: 6 }}>
-              <b>User:</b> {c.user} <br />
-              <b>Bot:</b> {c.bot}
-            </div>
-          ))}
-        </div>
+      {/* Top Bar */}
+      <div className="flex justify-between items-center mb-6">
+        {!user ? (
+          <button className={btn} onClick={login}>
+            Login with Google
+          </button>
+        ) : (
+          <div className="flex items-center gap-4">
+            <img
+              src={user.picture}
+              className="w-10 h-10 rounded-full border"
+              alt="Profile"
+            />
+            <span className="font-semibold">{user.name}</span>
+            <button className={btnDanger} onClick={logout}>
+              Logout
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Search Bar */}
+      <div className="flex gap-3 mb-4">
         <input
-          value={chatInput}
-          onChange={(e) => setChatInput(e.target.value)}
-          placeholder="Type a command..."
-          style={{ padding: 8, width: "70%" }}
+          className="w-full p-2 border rounded-md"
+          placeholder="Search videos..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
         />
-        <button onClick={() => handleChatCommand(chatInput)} style={{ marginLeft: 10, padding: 8 }}>
-          Send
+        <button className={btn} onClick={searchVideos}>
+          Search
         </button>
       </div>
 
-      {/* Video list */}
-      <div style={{ marginTop: 30 }}>
-        {videos.map((v: any) => (
-          <div key={v.videoId} style={{ marginBottom: 30, borderBottom: "1px solid #ddd", paddingBottom: 20 }}>
+      {loading && <p>Searching...</p>}
 
-            <h2
-              onClick={() => window.open(`https://www.youtube.com/watch?v=${v.videoId}`, "_blank")}
-              style={{ cursor: "pointer", color: "#1a0dab" }}
+      {/* Results */}
+      <div className="space-y-6">
+        {results.map((v) => (
+          <div key={v.videoId} className="p-4 border rounded-md shadow">
+
+            {/* CLICK TO OPEN YOUTUBE VIDEO */}
+            <div
+              className="flex gap-4 cursor-pointer"
+              onClick={() =>
+                window.open(`https://www.youtube.com/watch?v=${v.videoId}`, "_blank")
+              }
             >
-              {v.title}
-            </h2>
+              <img src={v.thumbnail} className="w-48 rounded" />
 
-            <img
-              src={v.thumbnail}
-              width={320}
-              height={180}
-              style={{ borderRadius: 8, cursor: "pointer" }}
-              onClick={() => window.open(`https://www.youtube.com/watch?v=${v.videoId}`, "_blank")}
-            />
+              <div>
+                <h2 className="font-bold text-lg">{v.title}</h2>
+                <p className="text-sm text-gray-600">{v.description}</p>
 
-            <p>{v.description}</p>
+                <div className="flex gap-3 mt-3">
+                  {/* Stop video opening when clicking buttons */}
+                  <button
+                    className={btn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      likeVideo(v.videoId);
+                    }}
+                  >
+                    👍 Like
+                  </button>
 
-            <button
-              onClick={async () => { 
-                if (!user) return alert("Please login first");
-                const res = await likeVideo(v.videoId); 
-                showToast(res.status || "Liked!"); 
-              }}
-              style={{ marginRight: 10, padding: 8 }}
-            >
-              👍 Like
-            </button>
+                  <button
+                    className={btnGreen}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      subscribe(v.channelId);
+                    }}
+                  >
+                    🔔 Subscribe
+                  </button>
+                </div>
 
-            <button
-              onClick={async () => { 
-                if (!user) return alert("Please login first");
-                const comment = prompt("Enter comment:"); 
-                if (!comment) return; 
-                const res = await commentVideo(v.videoId, comment); 
-                showToast(res.status || "Comment posted!"); 
-              }}
-              style={{ marginRight: 10, padding: 8 }}
-            >
-              💬 Comment
-            </button>
-
-            <button
-              onClick={async () => { 
-                if (!user) return alert("Please login first");
-                const res = await subscribeChannel(v.channelId); 
-                showToast(res.status || "Subscribed!"); 
-              }}
-              style={{ padding: 8 }}
-            >
-              🔔 Subscribe
-            </button>
-
+                {/* Comment Box */}
+                <div className="mt-3 flex gap-2">
+                  <input
+                    className="flex-1 p-2 border rounded"
+                    placeholder="Write comment..."
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                  />
+                  <button
+                    className={btn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      commentVideo(v.videoId);
+                    }}
+                  >
+                    💬 Comment
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         ))}
+
+        {results.length === 0 && !loading && (
+          <p className="text-gray-500 mt-5">No results yet. Try searching.</p>
+        )}
       </div>
     </div>
   );
