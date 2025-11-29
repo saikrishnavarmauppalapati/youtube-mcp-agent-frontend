@@ -108,18 +108,3 @@ npm start
 
 ---
 
-## 📸 Screenshots
-
-*(Add UI screenshots here)*
-
----
-
-## 🤝 Contributing
-
-Pull requests are welcome! For significant changes, please open an issue first.
-
----
-
-## 📜 License
-
-MIT License
