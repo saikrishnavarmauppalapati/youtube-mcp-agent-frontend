@@ -1,225 +1,211 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import {
+  getLoginUrl,
+  getUserInfo,
+  logoutUser,
+  fetchVideos,
+  likeVideo,
+  commentVideo,
+  subscribeChannel,
+} from "../lib/api";
 
-export default function Page() {
-  const BACKEND = "https://mcp-youtube-agent-xw94.onrender.com";
-
+export default function HomePage() {
   const [user, setUser] = useState<any>(null);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<any[]>([]);
-  const [commentText, setCommentText] = useState("");
+  const [videos, setVideos] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // -----------------------------
-  // Fetch logged-in user
-  // -----------------------------
-  const fetchUser = async () => {
-    try {
-      const res = await fetch(`${BACKEND}/auth/me`);
-      if (res.status === 200) {
-        const data = await res.json();
-        setUser(data);
-      } else {
-        setUser(null);
-      }
-    } catch (e) {
-      setUser(null);
-    }
-  };
-
+  // ---------------------------
+  // Load user on page open
+  // ---------------------------
   useEffect(() => {
-    fetchUser();
+    (async () => {
+      const data = await getUserInfo();
+      if (!data.error) setUser(data);
+    })();
   }, []);
 
-  // -----------------------------
-  // Login
-  // -----------------------------
-  const login = async () => {
-    const res = await fetch(`${BACKEND}/auth/login`);
-    const data = await res.json();
-    window.location.href = data.auth_url;
-  };
-
-  // -----------------------------
-  // Logout
-  // -----------------------------
-  const logout = async () => {
-    await fetch(`${BACKEND}/auth/logout`, { method: "POST" });
-    setUser(null);
-  };
-
-  // -----------------------------
-  // Video Search
-  // -----------------------------
-  const searchVideos = async () => {
-    setLoading(true);
-
-    const res = await fetch(`${BACKEND}/mcp/youtube/search`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query }),
-    });
-
-    const data = await res.json();
-    setResults(data.results || []);
-    setLoading(false);
-  };
-
-  // -----------------------------
-  // Protected Action Check
-  // -----------------------------
-  const requireLogin = () => {
-    if (!user) {
-      alert("Please login to continue.");
-      return false;
+  // ---------------------------
+  // LOGIN
+  // ---------------------------
+  async function handleLogin() {
+    const res = await getLoginUrl();
+    if (res.auth_url) {
+      window.location.href = res.auth_url;
+    } else {
+      alert("Failed to load login URL");
     }
-    return true;
-  };
+  }
 
-  // -----------------------------
-  // Like
-  // -----------------------------
-  const likeVideo = async (videoId: string) => {
-    if (!requireLogin()) return;
+  // ---------------------------
+  // LOGOUT
+  // ---------------------------
+  async function handleLogout() {
+    await logoutUser();
+    setUser(null);
+    alert("Logged out");
+  }
 
-    await fetch(`${BACKEND}/mcp/youtube/like/${videoId}`, { method: "POST" });
+  // ---------------------------
+  // SEARCH VIDEOS
+  // ---------------------------
+  async function handleSearch() {
+    if (!query.trim()) return alert("Enter search term");
+
+    setLoading(true);
+    const res = await fetchVideos(query);
+    setVideos(res.results || []);
+    setLoading(false);
+  }
+
+  // ---------------------------
+  // LIKE
+  // ---------------------------
+  async function handleLike(videoId: string) {
+    if (!user) return alert("Login required");
+
+    const res = await likeVideo(videoId);
     alert("Video liked!");
-  };
+  }
 
-  // -----------------------------
-  // Comment
-  // -----------------------------
-  const commentVideo = async (videoId: string) => {
-    if (!requireLogin()) return;
+  // ---------------------------
+  // COMMENT
+  // ---------------------------
+  async function handleComment(videoId: string) {
+    if (!user) return alert("Login required");
 
-    await fetch(`${BACKEND}/mcp/youtube/comment`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        video_id: videoId,
-        text: commentText,
-      }),
-    });
+    const text = prompt("Enter your comment:");
+    if (!text) return;
 
-    alert("Comment added!");
-    setCommentText("");
-  };
+    const res = await commentVideo(videoId, text);
+    alert("Comment posted!");
+  }
 
-  // -----------------------------
-  // Subscribe
-  // -----------------------------
-  const subscribe = async (channelId: string) => {
-    if (!requireLogin()) return;
+  // ---------------------------
+  // SUBSCRIBE
+  // ---------------------------
+  async function handleSubscribe(channelId: string) {
+    if (!user) return alert("Login required");
 
-    await fetch(`${BACKEND}/mcp/youtube/subscribe`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ channel_id: channelId }),
-    });
-
-    alert("Subscribed successfully!");
-  };
-
-  // -----------------------------
-  // Button Style With Hover
-  // -----------------------------
-  const btn =
-    "px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 transition-all";
-
-  const btnDanger =
-    "px-4 py-2 rounded-md bg-red-600 text-white font-medium hover:bg-red-700 transition-all";
-
-  const btnGreen =
-    "px-4 py-2 rounded-md bg-green-600 text-white font-medium hover:bg-green-700 transition-all";
+    const res = await subscribeChannel(channelId);
+    alert("Subscribed!");
+  }
 
   return (
-    <div className="p-10 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-5">🎬 YouTube MCP Agent</h1>
+    <div className="p-6 max-w-4xl mx-auto">
 
-      {/* Top Bar */}
+      {/* ------------------ HEADER ------------------ */}
       <div className="flex justify-between items-center mb-6">
-        {!user ? (
-          <button className={btn} onClick={login}>
-            Login with Google
-          </button>
-        ) : (
+
+        <h1 className="text-2xl font-bold">YouTube MCP Agent</h1>
+
+        {/* User logged in */}
+        {user ? (
           <div className="flex items-center gap-4">
             <img
               src={user.picture}
+              alt="profile"
               className="w-10 h-10 rounded-full border"
-              alt="Profile"
             />
             <span className="font-semibold">{user.name}</span>
-            <button className={btnDanger} onClick={logout}>
+
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition"
+            >
               Logout
             </button>
           </div>
+        ) : (
+          /* User NOT logged in */
+          <button
+            onClick={handleLogin}
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition"
+          >
+            Login with Google
+          </button>
         )}
+
       </div>
 
-      {/* Search Bar */}
-      <div className="flex gap-3 mb-4">
+      {/* ------------------ SEARCH SECTION ------------------ */}
+      <div className="flex gap-2 mb-6">
         <input
-          className="w-full p-2 border rounded-md"
+          type="text"
           placeholder="Search videos..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          className="flex-1 border p-2 rounded"
         />
-        <button className={btn} onClick={searchVideos}>
+
+        <button
+          onClick={handleSearch}
+          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition"
+        >
           Search
         </button>
       </div>
 
-      {loading && <p>Searching...</p>}
+      {/* ------------------ RESULTS ------------------ */}
+      {loading && <p>Loading...</p>}
 
-      {/* Results */}
-      <div className="space-y-6">
-        {results.map((v) => (
-          <div key={v.videoId} className="p-4 border rounded-md shadow">
-            <div className="flex gap-4">
-              <img src={v.thumbnail} className="w-48 rounded" />
+      {!loading && videos.length === 0 && (
+        <p className="opacity-60">No videos found yet. Try searching!</p>
+      )}
 
-              <div>
-                <h2 className="font-bold text-lg">{v.title}</h2>
-                <p className="text-sm text-gray-600">{v.description}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {videos.map((v) => (
+          <div key={v.videoId} className="border p-4 rounded shadow">
 
-                <div className="flex gap-3 mt-3">
-                  <button className={btn} onClick={() => likeVideo(v.videoId)}>
-                    👍 Like
-                  </button>
+            {/* CLICKABLE VIDEO THUMBNAIL */}
+            <a
+              href={`https://www.youtube.com/watch?v=${v.videoId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block hover:opacity-80 transition"
+            >
+              <img src={v.thumbnail} className="w-full rounded mb-2 cursor-pointer" />
+            </a>
 
-                  <button
-                    className={btnGreen}
-                    onClick={() => subscribe(v.channelId)}
-                  >
-                    🔔 Subscribe
-                  </button>
-                </div>
+            <a
+              href={`https://www.youtube.com/watch?v=${v.videoId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <h2 className="font-bold text-lg hover:underline cursor-pointer mb-2">
+                {v.title}
+              </h2>
+            </a>
 
-                {/* Comment Box */}
-                <div className="mt-3 flex gap-2">
-                  <input
-                    className="flex-1 p-2 border rounded"
-                    placeholder="Write comment..."
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                  />
-                  <button
-                    className={btn}
-                    onClick={() => commentVideo(v.videoId)}
-                  >
-                    💬 Comment
-                  </button>
-                </div>
-              </div>
+            <p className="text-sm opacity-70 mb-3">{v.description}</p>
+
+            {/* BUTTONS */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleLike(v.videoId)}
+                className="px-3 py-1 bg-pink-500 hover:bg-pink-600 text-white rounded transition"
+              >
+                Like
+              </button>
+
+              <button
+                onClick={() => handleComment(v.videoId)}
+                className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded transition"
+              >
+                Comment
+              </button>
+
+              <button
+                onClick={() => handleSubscribe(v.channelId)}
+                className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded transition"
+              >
+                Subscribe
+              </button>
             </div>
           </div>
         ))}
-
-        {results.length === 0 && !loading && (
-          <p className="text-gray-500 mt-5">No results yet. Try searching.</p>
-        )}
       </div>
     </div>
   );
