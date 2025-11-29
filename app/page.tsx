@@ -1,209 +1,221 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
+import { 
   getLoginUrl,
-  getUserInfo,
-  logoutUser,
   fetchVideos,
   likeVideo,
   commentVideo,
   subscribeChannel,
+  getUserInfo,
+  logoutUser
 } from "../lib/api";
 
-export default function HomePage() {
-  const [user, setUser] = useState<any>(null);
-  const [query, setQuery] = useState("");
-  const [videos, setVideos] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+// Simple toast
+function showToast(msg: string) {
+  const el = document.createElement("div");
+  el.innerText = msg;
+  el.style.position = "fixed";
+  el.style.bottom = "20px";
+  el.style.right = "20px";
+  el.style.background = "#333";
+  el.style.color = "#fff";
+  el.style.padding = "10px 15px";
+  el.style.borderRadius = "6px";
+  el.style.zIndex = "9999";
+  document.body.appendChild(el);
+  setTimeout(() => document.body.removeChild(el), 3000);
+}
 
-  // ---------------------------
-  // Load user on page open
-  // ---------------------------
+export default function Home() {
+  const [videos, setVideos] = useState<any[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [chatInput, setChatInput] = useState("");
+  const [chatHistory, setChatHistory] = useState<{ user: string; bot: string }[]>([]);
+
+  // Load user info
   useEffect(() => {
-    (async () => {
-      const data = await getUserInfo();
-      if (!data.error) setUser(data);
-    })();
+    async function loadUser() {
+      try {
+        const u = await getUserInfo();
+        if (!u.error) setUser(u);
+      } catch {
+        setUser(null);
+      }
+    }
+    loadUser();
   }, []);
 
-  // ---------------------------
-  // LOGIN
-  // ---------------------------
+  // Load default videos
+  useEffect(() => {
+    async function loadDefault() {
+      const data = await fetchVideos("technology");
+      setVideos(data);
+    }
+    loadDefault();
+  }, []);
+
   async function handleLogin() {
-    const res = await getLoginUrl();
-    if (res.auth_url) {
-      window.location.href = res.auth_url;
+    const { auth_url } = await getLoginUrl();
+    if (auth_url) {
+      window.location.href = auth_url;
     } else {
-      alert("Failed to load login URL");
+      alert("Failed to get login URL");
     }
   }
 
-  // ---------------------------
-  // LOGOUT
-  // ---------------------------
   async function handleLogout() {
     await logoutUser();
     setUser(null);
-    alert("Logged out");
+    setVideos([]);
+    setChatHistory([]);
   }
 
-  // ---------------------------
-  // SEARCH VIDEOS
-  // ---------------------------
-  async function handleSearch() {
-    if (!query.trim()) return alert("Enter search term");
+  async function handleChatCommand(command: string) {
+    if (!command.trim()) return;
+    setChatHistory((prev) => [...prev, { user: command, bot: "Processing..." }]);
+    const lower = command.toLowerCase();
 
-    setLoading(true);
-    const res = await fetchVideos(query);
-    setVideos(res.results || []);
-    setLoading(false);
-  }
+    try {
+      if (lower.startsWith("search")) {
+        const query = command.replace(/search/i, "").trim();
+        const data = await fetchVideos(query);
+        setVideos(data);
+        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: `Found ${data.length} videos for "${query}"` }]);
+      } else if (lower.startsWith("like")) {
+        const videoId = command.split(" ")[1];
+        const res = await likeVideo(videoId);
+        showToast(res.status || "Liked!");
+        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: res.status || "Liked!" }]);
+      } else if (lower.startsWith("comment")) {
+        const [_, videoId, ...textParts] = command.split(" ");
+        const commentText = textParts.join(" ");
+        if (!videoId || !commentText) throw new Error("Usage: comment <videoId> <text>");
+        const res = await commentVideo(videoId, commentText);
+        showToast(res.status || "Comment posted!");
+        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: res.status || "Comment posted!" }]);
+      } else if (lower.startsWith("subscribe")) {
+        const channelId = command.split(" ")[1];
+        if (!channelId) throw new Error("Usage: subscribe <channelId>");
+        const res = await subscribeChannel(channelId);
+        showToast(res.status || "Subscribed!");
+        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: res.status || "Subscribed!" }]);
+      } else {
+        setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: "Unknown command" }]);
+      }
+    } catch (err: any) {
+      setChatHistory((prev) => [...prev.slice(0, -1), { user: command, bot: err.message || "Error" }]);
+      showToast(err.message || "Error executing command");
+    }
 
-  // ---------------------------
-  // LIKE
-  // ---------------------------
-  async function handleLike(videoId: string) {
-    if (!user) return alert("Login required");
-
-    const res = await likeVideo(videoId);
-    alert("Video liked!");
-  }
-
-  // ---------------------------
-  // COMMENT
-  // ---------------------------
-  async function handleComment(videoId: string) {
-    if (!user) return alert("Login required");
-
-    const text = prompt("Enter your comment:");
-    if (!text) return;
-
-    const res = await commentVideo(videoId, text);
-    alert("Comment posted!");
-  }
-
-  // ---------------------------
-  // SUBSCRIBE
-  // ---------------------------
-  async function handleSubscribe(channelId: string) {
-    if (!user) return alert("Login required");
-
-    const res = await subscribeChannel(channelId);
-    alert("Subscribed!");
+    setChatInput("");
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-
-      {/* ------------------ HEADER ------------------ */}
-      <div className="flex justify-between items-center mb-6">
-
-        <h1 className="text-2xl font-bold">YouTube MCP Agent</h1>
-
-        {/* User logged in */}
-        {user ? (
-          <div className="flex items-center gap-4">
-            <img
-              src={user.picture}
-              alt="profile"
-              className="w-10 h-10 rounded-full border"
-            />
-            <span className="font-semibold">{user.name}</span>
-
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition"
-            >
-              Logout
+    <div style={{ padding: 20, maxWidth: 900, margin: "auto" }}>
+      
+      {/* Header */}
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h1>YouTube MCP Agent</h1>
+        <div>
+          {!user ? (
+            <button onClick={handleLogin} style={{ background: "#4285F4", color: "white", padding: 10, borderRadius: 6 }}>
+              Login with Google
             </button>
-          </div>
-        ) : (
-          /* User NOT logged in */
-          <button
-            onClick={handleLogin}
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition"
-          >
-            Login with Google
-          </button>
-        )}
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <img src={user.picture} width={40} height={40} style={{ borderRadius: "50%" }} />
+              <div>
+                <b>{user.name}</b>
+                <div style={{ fontSize: 12, color: "#555" }}>{user.email}</div>
+              </div>
+              <button onClick={handleLogout} style={{ background: "#e53935", color: "white", padding: "8px 12px", borderRadius: 8 }}>
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
 
-      </div>
-
-      {/* ------------------ SEARCH SECTION ------------------ */}
-      <div className="flex gap-2 mb-6">
+      {/* Chatbot */}
+      <div style={{ marginTop: 20, border: "1px solid #ccc", borderRadius: 8, padding: 15 }}>
+        <h2>ChatBot</h2>
+        <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 10 }}>
+          {chatHistory.map((c, i) => (
+            <div key={i} style={{ marginBottom: 6 }}>
+              <b>User:</b> {c.user} <br />
+              <b>Bot:</b> {c.bot}
+            </div>
+          ))}
+        </div>
         <input
-          type="text"
-          placeholder="Search videos..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="flex-1 border p-2 rounded"
+          value={chatInput}
+          onChange={(e) => setChatInput(e.target.value)}
+          placeholder="Type a command..."
+          style={{ padding: 8, width: "70%" }}
         />
-
-        <button
-          onClick={handleSearch}
-          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition"
-        >
-          Search
+        <button onClick={() => handleChatCommand(chatInput)} style={{ marginLeft: 10, padding: 8 }}>
+          Send
         </button>
       </div>
 
-      {/* ------------------ RESULTS ------------------ */}
-      {loading && <p>Loading...</p>}
+      {/* Video list */}
+      <div style={{ marginTop: 30 }}>
+        {videos.map((v: any) => (
+          <div key={v.videoId} style={{ marginBottom: 30, borderBottom: "1px solid #ddd", paddingBottom: 20 }}>
 
-      {!loading && videos.length === 0 && (
-        <p className="opacity-60">No videos found yet. Try searching!</p>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {videos.map((v) => (
-          <div key={v.videoId} className="border p-4 rounded shadow">
-
-            {/* CLICKABLE VIDEO THUMBNAIL */}
-            <a
-              href={`https://www.youtube.com/watch?v=${v.videoId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block hover:opacity-80 transition"
+            <h2
+              onClick={() => window.open(`https://www.youtube.com/watch?v=${v.videoId}`, "_blank")}
+              style={{ cursor: "pointer", color: "#1a0dab" }}
             >
-              <img src={v.thumbnail} className="w-full rounded mb-2 cursor-pointer" />
-            </a>
+              {v.title}
+            </h2>
 
-            <a
-              href={`https://www.youtube.com/watch?v=${v.videoId}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <img
+              src={v.thumbnail}
+              width={320}
+              height={180}
+              style={{ borderRadius: 8, cursor: "pointer" }}
+              onClick={() => window.open(`https://www.youtube.com/watch?v=${v.videoId}`, "_blank")}
+            />
+
+            <p>{v.description}</p>
+
+            <button
+              onClick={async () => { 
+                if (!user) return alert("Please login first");
+                const res = await likeVideo(v.videoId); 
+                showToast(res.status || "Liked!"); 
+              }}
+              style={{ marginRight: 10, padding: 8 }}
             >
-              <h2 className="font-bold text-lg hover:underline cursor-pointer mb-2">
-                {v.title}
-              </h2>
-            </a>
+              👍 Like
+            </button>
 
-            <p className="text-sm opacity-70 mb-3">{v.description}</p>
+            <button
+              onClick={async () => { 
+                if (!user) return alert("Please login first");
+                const comment = prompt("Enter comment:"); 
+                if (!comment) return; 
+                const res = await commentVideo(v.videoId, comment); 
+                showToast(res.status || "Comment posted!"); 
+              }}
+              style={{ marginRight: 10, padding: 8 }}
+            >
+              💬 Comment
+            </button>
 
-            {/* BUTTONS */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleLike(v.videoId)}
-                className="px-3 py-1 bg-pink-500 hover:bg-pink-600 text-white rounded transition"
-              >
-                Like
-              </button>
+            <button
+              onClick={async () => { 
+                if (!user) return alert("Please login first");
+                const res = await subscribeChannel(v.channelId); 
+                showToast(res.status || "Subscribed!"); 
+              }}
+              style={{ padding: 8 }}
+            >
+              🔔 Subscribe
+            </button>
 
-              <button
-                onClick={() => handleComment(v.videoId)}
-                className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded transition"
-              >
-                Comment
-              </button>
-
-              <button
-                onClick={() => handleSubscribe(v.channelId)}
-                className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded transition"
-              >
-                Subscribe
-              </button>
-            </div>
           </div>
         ))}
       </div>
