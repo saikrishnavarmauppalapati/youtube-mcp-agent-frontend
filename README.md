@@ -1,36 +1,125 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# YouTube AI Agent Frontend
 
-## Getting Started
+This repository contains the frontend application for the YouTube AI Agent project. The application is built using **Next.js**, **React**, and **Tailwind CSS**, and communicates with the MCP backend to perform actions such as liking, commenting, and subscribing to YouTube videos.
 
-First, run the development server:
+---
+
+## 🚀 Features
+
+* 🔐 Google OAuth Login (YouTube Authentication)
+* ▶️ Watch YouTube videos directly inside the app
+* 💬 Comment using AI-generated responses
+* 👍 Auto-like videos
+* 🔔 Auto-subscribe to channels
+* 🤖 Uses MCP (Model Context Protocol) to interact with AI tools
+* ⚡ Fast and optimized UI using Turbopack
+
+---
+
+## 📂 Project Structure
+
+```
+frontend/
+│── app/
+│   ├── auth/
+│   │   └── callback/page.tsx
+│   ├── page.tsx
+│── components/
+│   ├── VideoCard.tsx
+│   ├── CommentBox.tsx
+│   | 
+│── lib/
+│   ├── api.js
+│   |
+│── public/
+│── README.md
+│── package.json
+```
+
+---
+
+## 🛠️ Tech Stack
+
+* **Next.js 14+** (App Router)
+* **React 18**
+* **Tailwind CSS**
+* **ShadCN UI** components
+* **Google OAuth**
+* **YouTube Data API v3**
+* **MCP Client** for AI actions
+
+---
+
+## 🔧 Setup Instructions
+
+### 1️⃣ Clone the repository
+
+```bash
+git clone <repo_url>
+cd frontend
+```
+
+### 2️⃣ Install dependencies
+
+```bash
+npm install
+```
+
+### 3️⃣ Create `.env.local`
+
+Create a new file:
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000
+GOOGLE_CLIENT_ID=your_client_id
+GOOGLE_CLIENT_SECRET=your_client_secret
+NEXTAUTH_SECRET=your_secret
+NEXTAUTH_URL=http://localhost:3000
+```
+
+### 4️⃣ Run the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App will run at: **[http://localhost:3000](http://localhost:3000)**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🔗 Backend Integration
 
-## Learn More
+The frontend communicates with your MCP agent backend for:
 
-To learn more about Next.js, take a look at the following resources:
+* AI-generated comments
+* Liking videos
+* Subscribing to channels
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Backend repo: *(Add link here)*
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🧪 Build for Production
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run build
+npm start
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 📸 Screenshots
+
+*(Add UI screenshots here)*
+
+---
+
+## 🤝 Contributing
+
+Pull requests are welcome! For significant changes, please open an issue first.
+
+---
+
+## 📜 License
+
+MIT License
