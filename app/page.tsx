@@ -122,7 +122,7 @@ export default function Page() {
   };
 
   // -----------------------------
-  // Button Styles
+  // Button Style With Hover
   // -----------------------------
   const btn =
     "px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 transition-all";
@@ -176,15 +176,14 @@ export default function Page() {
       {/* Results */}
       <div className="space-y-6">
         {results.map((v) => (
-          <div key={v.videoId} className="p-4 border rounded-md shadow">
-
-            {/* CLICK TO OPEN YOUTUBE VIDEO */}
-            <div
-              className="flex gap-4 cursor-pointer"
-              onClick={() =>
-                window.open(`https://www.youtube.com/watch?v=${v.videoId}`, "_blank")
-              }
-            >
+          <div
+            key={v.videoId}
+            className="p-4 border rounded-md shadow cursor-pointer"
+            onClick={() =>
+              window.open(`https://www.youtube.com/watch?v=${v.videoId}`, "_blank")
+            }
+          >
+            <div className="flex gap-4">
               <img src={v.thumbnail} className="w-48 rounded" />
 
               <div>
@@ -192,7 +191,6 @@ export default function Page() {
                 <p className="text-sm text-gray-600">{v.description}</p>
 
                 <div className="flex gap-3 mt-3">
-                  {/* Stop video opening when clicking buttons */}
                   <button
                     className={btn}
                     onClick={(e) => {
@@ -221,6 +219,7 @@ export default function Page() {
                     placeholder="Write comment..."
                     value={commentText}
                     onChange={(e) => setCommentText(e.target.value)}
+                    onClick={(e) => e.stopPropagation()} // FIXED
                   />
                   <button
                     className={btn}
