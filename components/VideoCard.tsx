@@ -1,74 +1,111 @@
 "use client";
+import React, { useState } from "react";
 
-import { callAgent } from "../lib/api";
+interface Video {
+  title: string;
+  videoId: string;
+  channelId?: string;
+  description?: string;
+  thumbnail?: string;
+}
 
-export default function VideoCard({ video, user }: { video: any; user: any }) {
-  async function handleAction(action: string) {
-    if (!user?.access_token) {
-      alert("Please login to perform this action");
+interface Props {
+  video: Video;
+  user: any;
+}
+
+export default function VideoCard({ video, user }: Props) {
+  const [actionStatus, setActionStatus] = useState("");
+
+  const BASE_URL = "https://mcp-youtube-agent-xw94.onrender.com";
+
+  const headers = user?.access_token
+    ? { Authorization: `Bearer ${user.access_token}` }
+    : {};
+
+  const handleLike = async () => {
+    setActionStatus("Liking...");
+    try {
+      const res = await fetch(`${BASE_URL}/mcp/youtube/like/${video.videoId}`, {
+        method: "POST",
+        headers,
+      });
+      const data = await res.json();
+      setActionStatus(data.status || "Liked!");
+    } catch (err) {
+      console.error(err);
+      setActionStatus("Failed to like video");
+    }
+  };
+
+  const handleComment = async () => {
+    const text = prompt("Enter your comment:");
+    if (!text) return;
+    setActionStatus("Commenting...");
+    try {
+      const res = await fetch(`${BASE_URL}/mcp/youtube/comment`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ video_id: video.videoId, text }),
+      });
+      const data = await res.json();
+      setActionStatus(data.status || "Commented!");
+    } catch (err) {
+      console.error(err);
+      setActionStatus("Failed to comment");
+    }
+  };
+
+  const handleSubscribe = async () => {
+    if (!video.channelId) {
+      alert("No channel ID found for this video");
       return;
     }
-
-    let command = "";
-    switch (action) {
-      case "like":
-        command = JSON.stringify({ tool: "like", args: { video_id: video.videoId } });
-        // We will send the plain command text to agent (agent expects natural language or JSON depending setup).
-        // But to be simple, use natural language that LLM will parse, e.g. "like <videoId>" — agent handles both.
-        command = `like ${video.videoId}`;
-        break;
-      case "comment":
-        const comment = prompt("Enter your comment:");
-        if (!comment) return;
-        command = `comment ${video.videoId} ${comment}`;
-        break;
-      case "subscribe":
-        command = `subscribe ${video.channelId}`;
-        break;
-      default:
-        return;
+    setActionStatus("Subscribing...");
+    try {
+      const res = await fetch(`${BASE_URL}/mcp/youtube/subscribe`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ channel_id: video.channelId }),
+      });
+      const data = await res.json();
+      setActionStatus(data.status || "Subscribed!");
+    } catch (err) {
+      console.error(err);
+      setActionStatus("Failed to subscribe");
     }
-
-    const token = `Bearer ${user.access_token}`;
-    const res = await callAgent(command, token);
-
-    if (res.error) {
-      alert("Action failed: " + (res.error || JSON.stringify(res)));
-    } else if (res.status) {
-      alert(res.status);
-    } else if (res.response) {
-      alert(res.response);
-    } else {
-      alert("Action completed");
-    }
-  }
+  };
 
   return (
-    <div className="border rounded shadow p-2">
-      <img src={video.thumbnail} alt={video.title} className="w-full rounded" />
-      <h2 className="font-bold text-lg mt-2">{video.title}</h2>
-      <p className="text-sm text-gray-600 line-clamp-3">{video.description}</p>
-      <p className="text-xs text-gray-400 mt-1">Channel: {video.channelId}</p>
+    <div className="border rounded p-2 shadow hover:shadow-lg">
+      {video.thumbnail && (
+        <img src={video.thumbnail} alt={video.title} className="w-full h-40 object-cover rounded" />
+      )}
+      <h2 className="font-semibold mt-2">{video.title}</h2>
+      <p className="text-sm text-gray-600">{video.description}</p>
 
-      <div className="mt-2 flex gap-2">
-        <a
-          href={`https://www.youtube.com/watch?v=${video.videoId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500 hover:underline text-sm"
-        >
-          Watch
-        </a>
-        <button onClick={() => handleAction("like")} className="bg-green-500 text-white px-2 py-1 rounded text-xs">
+      <div className="flex gap-2 mt-2">
+        <button onClick={handleLike} className="bg-blue-500 text-white px-2 py-1 rounded">
           Like
         </button>
-        <button onClick={() => handleAction("comment")} className="bg-yellow-500 text-white px-2 py-1 rounded text-xs">
+        <button onClick={handleComment} className="bg-green-500 text-white px-2 py-1 rounded">
           Comment
         </button>
-        <button onClick={() => handleAction("subscribe")} className="bg-purple-500 text-white px-2 py-1 rounded text-xs">
+        <button onClick={handleSubscribe} className="bg-red-500 text-white px-2 py-1 rounded">
           Subscribe
         </button>
       </div>
+
+      {actionStatus && <p className="text-sm text-gray-800 mt-1">{actionStatus}</p>}
+
+      <a
+        href={`https://www.youtube.com/watch?v=${video.videoId}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 text-sm mt-1 block"
+      >
+        Watch on YouTube
+      </a>
     </div>
   );
 }
