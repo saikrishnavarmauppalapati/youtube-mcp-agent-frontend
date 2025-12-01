@@ -1,21 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { callAgent, getLoginUrl, logoutUser, getUserProfile } from "../lib/api";
+import { callAgent, getLoginUrl, logoutUser, getUserProfile, User, AgentResponse } from "../lib/api";
 import VideoCard from "../components/VideoCard";
 
 export default function HomePage() {
   const [message, setMessage] = useState("");
   const [videos, setVideos] = useState<any[]>([]);
   const [status, setStatus] = useState("");
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
+  // Load user profile on mount
   useEffect(() => {
-    async function loadUser() {
+    async function loadProfile() {
       const u = await getUserProfile();
       setUser(u);
     }
-    loadUser();
+    loadProfile();
   }, []);
 
   const handleLogin = async () => {
@@ -31,22 +32,18 @@ export default function HomePage() {
     await logoutUser();
     setUser(null);
     setVideos([]);
+    setStatus("");
     alert("Logged out.");
   };
 
   const handleSend = async () => {
     if (!message.trim()) return;
-    if (!user) {
-      alert("Please login to perform this action");
-      return;
-    }
-
     setStatus("Processing...");
     setVideos([]);
 
     try {
       const token = user?.access_token ? `Bearer ${user.access_token}` : undefined;
-      const data = await callAgent(message, token);
+      const data: AgentResponse = await callAgent(message, token);
 
       if (data.error) {
         alert(data.error + (data.details ? ` (${data.details})` : ""));
@@ -54,19 +51,22 @@ export default function HomePage() {
         return;
       }
 
-      if (Array.isArray(data.results)) {
+      // If results array exists, show videos
+      if (data.results && Array.isArray(data.results)) {
         setVideos(data.results);
         setStatus(`Found ${data.results.length} videos`);
         return;
       }
 
+      // If status string exists (like/comment/subscribe)
       if (data.status) {
         alert(data.status);
         setStatus("");
         return;
       }
 
-      if (data.response && typeof data.response === "string") {
+      // If response string exists
+      if (data.response) {
         alert(data.response);
         setStatus("");
         return;
@@ -92,18 +92,12 @@ export default function HomePage() {
                 <img src={user.picture} alt="profile" className="w-8 h-8 rounded-full" />
               )}
               <span className="font-semibold">{user.name || user.email}</span>
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 text-white px-3 py-1 rounded"
-              >
+              <button onClick={handleLogout} className="bg-red-500 text-white px-3 py-1 rounded">
                 Logout
               </button>
             </>
           ) : (
-            <button
-              onClick={handleLogin}
-              className="bg-green-500 text-white px-3 py-1 rounded"
-            >
+            <button onClick={handleLogin} className="bg-green-500 text-white px-3 py-1 rounded">
               Login
             </button>
           )}
@@ -113,13 +107,19 @@ export default function HomePage() {
       <div className="flex mb-4">
         <input
           type="text"
-          placeholder="Ask me to search, like, comment, or recommend..."
+          placeholder="Ask me to search (e.g., 'search devops'), like, comment, or recommend..."
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           className="border rounded-l px-4 py-2 flex-1"
         />
         <button
-          onClick={handleSend}
+          onClick={() => {
+            if (!user) {
+              alert("Please login to perform this action");
+              return;
+            }
+            handleSend();
+          }}
           className="bg-blue-500 text-white px-4 py-2 rounded-r"
         >
           Send
