@@ -1,92 +1,77 @@
 "use client";
 
-import { useState } from "react";
-import {
-  callAgent,
-  likeVideo,
-  commentVideo,
-  subscribeChannel,
-  getLoginUrl,
-  logoutUser,
-} from "../lib/api";
+import { useState, useEffect } from "react";
+import { callAgent, getUserProfile, getLoginUrl, logoutUser } from "../lib/api";
 
 interface ChatBotProps {
-  onSearch: (q: string) => void;
-  onActionResult: (msg: string) => void;
+  onVideosUpdate: (videos: any[]) => void;
 }
 
-export default function ChatBot({ onSearch, onActionResult }: ChatBotProps) {
+export default function ChatBox({ onVideosUpdate }: ChatBotProps) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([
-    { from: "bot", text: "Hi! Ask me to search videos or to like/comment/subscribe." }
+    { from: "bot", text: "Hi! Ask me to search videos or to like/comment/subscribe." },
   ]);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    async function fetchUser() {
+      const profile = await getUserProfile();
+      setUser(profile);
+    }
+    fetchUser();
+  }, []);
 
   function addMessage(from: string, text: string) {
     setMessages((m) => [...m, { from, text }]);
   }
+
+  const handleLogin = async () => {
+    const { auth_url } = await getLoginUrl();
+    window.location.href = auth_url;
+  };
+
+  const handleLogout = async () => {
+    await logoutUser();
+    setUser(null);
+    alert("Logged out successfully");
+  };
 
   async function handleSend() {
     if (!input.trim()) return;
     const text = input.trim();
     addMessage("user", text);
 
-    // Check for frontend commands
-    if (text.startsWith("like ")) {
-      const id = text.replace("like ", "");
-      const r = await likeVideo(id);
-      onActionResult(r.status || "Liked");
-      addMessage("bot", "Liked the video!");
+    if (!user) {
+      alert("Please login to perform actions");
       setInput("");
       return;
     }
 
-    if (text.startsWith("comment ")) {
-      const [, id, ...rest] = text.split(" ");
-      const comment = rest.join(" ");
-      const r = await commentVideo(id, comment);
-      onActionResult(r.status || "Commented");
-      addMessage("bot", "Comment posted!");
-      setInput("");
-      return;
-    }
-
-    if (text.startsWith("subscribe ")) {
-      const id = text.replace("subscribe ", "");
-      const r = await subscribeChannel(id);
-      onActionResult(r.status || "Subscribed");
-      addMessage("bot", "Subscribed!");
-      setInput("");
-      return;
-    }
-
-    if (text === "login") {
-      const { auth_url } = await getLoginUrl();
-      window.location.href = auth_url;
-      return;
-    }
-
-    if (text === "logout") {
-      await logoutUser();
-      addMessage("bot", "Logged out.");
-      return;
-    }
-
-    // Everything else → send to AI agent
+    // Send message to AI agent
     try {
-      const response = await callAgent(text);
-      if (response.results) {
-        onSearch(response.results);
-        addMessage("bot", "Here are some video results.");
-      } else if (response.status) {
-        addMessage("bot", response.status);
-      } else if (response.error) {
-        addMessage("bot", response.error);
+      const data = await callAgent(text);
+
+      if (data.error) {
+        alert(data.error);
+        addMessage("bot", "Action failed");
+        setInput("");
+        return;
+      }
+
+      // Show results if any
+      if (data.results && Array.isArray(data.results)) {
+        onVideosUpdate(data.results);
+        addMessage("bot", `Found ${data.results.length} videos`);
+      } else if (data.status) {
+        alert(data.status);
+        addMessage("bot", data.status);
       } else {
-        addMessage("bot", "I did not understand your request.");
+        addMessage("bot", "No valid response from agent.");
       }
     } catch (err) {
       console.error(err);
-      addMessage("bot", "Error communicating with AI agent.");
+      addMessage("bot", "Error communicating with AI agent");
     }
 
     setInput("");
@@ -94,7 +79,22 @@ export default function ChatBot({ onSearch, onActionResult }: ChatBotProps) {
 
   return (
     <div className="border p-4 rounded-lg max-w-[500px]">
-      <div className="h-[250px] overflow-y-auto bg-gray-100 p-3 rounded">
+      <div className="flex justify-between mb-2">
+        {user ? (
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">{user.name}</span>
+            <button onClick={handleLogout} className="bg-red-500 text-white px-2 py-1 rounded">
+              Logout
+            </button>
+          </div>
+        ) : (
+          <button onClick={handleLogin} className="bg-green-500 text-white px-2 py-1 rounded">
+            Login
+          </button>
+        )}
+      </div>
+
+      <div className="h-[250px] overflow-y-auto bg-gray-100 p-3 rounded mb-2">
         {messages.map((m, i) => (
           <div key={i} className={m.from === "bot" ? "text-blue-600" : "text-black"}>
             <b>{m.from}:</b> {m.text}
@@ -102,7 +102,7 @@ export default function ChatBot({ onSearch, onActionResult }: ChatBotProps) {
         ))}
       </div>
 
-      <div className="flex gap-2 mt-3">
+      <div className="flex gap-2">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
