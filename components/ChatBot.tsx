@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { callAgent, getLoginUrl, logoutUser, getUserProfile } from "./api";
+import { callAgent, getLoginUrl, logoutUser, getUserProfile } from "../lib/api";
 
 interface User {
   name?: string;
