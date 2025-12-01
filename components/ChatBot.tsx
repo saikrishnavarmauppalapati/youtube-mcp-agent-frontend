@@ -13,6 +13,7 @@ interface User {
   name?: string;
   email?: string;
   picture?: string;
+  access_token?: string;
 }
 
 interface Message {
@@ -59,14 +60,19 @@ export default function ChatBox() {
       return;
     }
 
+    // FIX #1 — Proper token passing
+    const token = user?.access_token ? `Bearer ${user.access_token}` : undefined;
+
     try {
-      const res = await callAgent(text);
+      // FIX #2 — Pass both message & token
+      const res = await callAgent(text, token);
+
       if (res.error) {
         addMessage("bot", `Error: ${res.error}`);
       } else if (res.results && Array.isArray(res.results)) {
         addMessage("bot", `Found ${res.results.length} videos`);
       } else if (res.status) {
-        alert(res.status); // show popup for actions
+        alert(res.status);
         addMessage("bot", res.status);
       } else {
         addMessage("bot", "No valid response from agent.");
