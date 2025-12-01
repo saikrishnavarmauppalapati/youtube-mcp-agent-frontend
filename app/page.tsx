@@ -21,16 +21,11 @@ export default function HomePage() {
         return;
       }
 
-      // If AI agent returns video results
       if (data.results && Array.isArray(data.results)) {
         setVideos(data.results);
-      } 
-      // If AI agent returns status message (like, comment, subscribe)
-      else if (data.status) {
+      } else if (data.status) {
         setStatus(data.status);
-      } 
-      // Unknown response
-      else {
+      } else {
         setStatus("No valid response from agent.");
       }
     } catch (err) {
@@ -45,7 +40,6 @@ export default function HomePage() {
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">YouTube MCP AI Agent</h1>
 
-      {/* Input Box */}
       <div className="flex mb-4">
         <input
           type="text"
@@ -62,17 +56,14 @@ export default function HomePage() {
         </button>
       </div>
 
-      {/* Status Messages */}
       {status && <p className="text-green-600 mb-4">{status}</p>}
 
-      {/* Video Results */}
-      {videos && videos.length > 0 ? (
+      {Array.isArray(videos) && videos.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {videos
-            .filter((video) => video && video.videoId) // only render valid videos
-            .map((video) => (
-              <VideoCard key={video.videoId} video={video} />
-            ))}
+          {videos.map((video, index) => {
+            if (!video || !video.videoId) return null;
+            return <VideoCard key={video.videoId || index} video={video} />;
+          })}
         </div>
       ) : null}
     </div>
