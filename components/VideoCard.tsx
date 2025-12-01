@@ -4,7 +4,7 @@ import { callAgent } from "../lib/api";
 
 export default function VideoCard({ video, user }: { video: any; user: any }) {
   async function handleAction(action: string) {
-    if (!user) {
+    if (!user?.access_token) {
       alert("Please login to perform this action");
       return;
     }
@@ -12,6 +12,9 @@ export default function VideoCard({ video, user }: { video: any; user: any }) {
     let command = "";
     switch (action) {
       case "like":
+        command = JSON.stringify({ tool: "like", args: { video_id: video.videoId } });
+        // We will send the plain command text to agent (agent expects natural language or JSON depending setup).
+        // But to be simple, use natural language that LLM will parse, e.g. "like <videoId>" — agent handles both.
         command = `like ${video.videoId}`;
         break;
       case "comment":
@@ -30,9 +33,13 @@ export default function VideoCard({ video, user }: { video: any; user: any }) {
     const res = await callAgent(command, token);
 
     if (res.error) {
-      alert(res.error);
+      alert("Action failed: " + (res.error || JSON.stringify(res)));
+    } else if (res.status) {
+      alert(res.status);
+    } else if (res.response) {
+      alert(res.response);
     } else {
-      alert(`${action.charAt(0).toUpperCase() + action.slice(1)} successful!`);
+      alert("Action completed");
     }
   }
 
@@ -40,7 +47,7 @@ export default function VideoCard({ video, user }: { video: any; user: any }) {
     <div className="border rounded shadow p-2">
       <img src={video.thumbnail} alt={video.title} className="w-full rounded" />
       <h2 className="font-bold text-lg mt-2">{video.title}</h2>
-      <p className="text-sm text-gray-600">{video.description}</p>
+      <p className="text-sm text-gray-600 line-clamp-3">{video.description}</p>
       <p className="text-xs text-gray-400 mt-1">Channel: {video.channelId}</p>
 
       <div className="mt-2 flex gap-2">
@@ -52,22 +59,13 @@ export default function VideoCard({ video, user }: { video: any; user: any }) {
         >
           Watch
         </a>
-        <button
-          onClick={() => handleAction("like")}
-          className="bg-green-500 text-white px-2 py-1 rounded text-xs"
-        >
+        <button onClick={() => handleAction("like")} className="bg-green-500 text-white px-2 py-1 rounded text-xs">
           Like
         </button>
-        <button
-          onClick={() => handleAction("comment")}
-          className="bg-yellow-500 text-white px-2 py-1 rounded text-xs"
-        >
+        <button onClick={() => handleAction("comment")} className="bg-yellow-500 text-white px-2 py-1 rounded text-xs">
           Comment
         </button>
-        <button
-          onClick={() => handleAction("subscribe")}
-          className="bg-purple-500 text-white px-2 py-1 rounded text-xs"
-        >
+        <button onClick={() => handleAction("subscribe")} className="bg-purple-500 text-white px-2 py-1 rounded text-xs">
           Subscribe
         </button>
       </div>
