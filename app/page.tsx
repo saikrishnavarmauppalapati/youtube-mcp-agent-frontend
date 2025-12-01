@@ -10,14 +10,16 @@ export default function HomePage() {
   const [status, setStatus] = useState("");
   const [user, setUser] = useState<any | null>(null);
 
+  // Load user profile on mount
   useEffect(() => {
-    async function load() {
+    async function loadUser() {
       const u = await getUserProfile();
       setUser(u);
     }
-    load();
+    loadUser();
   }, []);
 
+  // Login
   const handleLogin = async () => {
     const res = await getLoginUrl();
     if (res.auth_url) {
@@ -27,6 +29,7 @@ export default function HomePage() {
     }
   };
 
+  // Logout
   const handleLogout = async () => {
     await logoutUser();
     setUser(null);
@@ -34,13 +37,18 @@ export default function HomePage() {
     alert("Logged out.");
   };
 
+  // Send message to AI agent
   const handleSend = async () => {
     if (!message.trim()) return;
+    if (!user) {
+      alert("Please login to perform this action");
+      return;
+    }
+
     setStatus("Processing...");
     setVideos([]);
 
     try {
-      // pass token if available (getUserProfile attaches access_token)
       const token = user?.access_token ? `Bearer ${user.access_token}` : null;
       const data = await callAgent(message, token);
 
@@ -57,14 +65,14 @@ export default function HomePage() {
         return;
       }
 
-      // Agent returned a status string (for like/comment/subscribe)
+      // Agent returned a status string (like/comment/subscribe)
       if (data.status) {
         alert(data.status);
         setStatus("");
         return;
       }
 
-      // In some cases agent returns {response: "..."} or other shapes
+      // Agent returned raw response
       if (data.response && typeof data.response === "string") {
         alert(data.response);
         setStatus("");
@@ -82,9 +90,9 @@ export default function HomePage() {
 
   return (
     <div className="container mx-auto p-4">
+      {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">YouTube MCP AI Agent</h1>
-
         <div className="flex items-center gap-3">
           {user ? (
             <>
@@ -92,42 +100,45 @@ export default function HomePage() {
                 <img src={user.picture} alt="profile" className="w-8 h-8 rounded-full" />
               )}
               <span className="font-semibold">{user.name || user.email}</span>
-              <button onClick={handleLogout} className="bg-red-500 text-white px-3 py-1 rounded">
+              <button
+                onClick={handleLogout}
+                className="bg-red-500 text-white px-3 py-1 rounded"
+              >
                 Logout
               </button>
             </>
           ) : (
-            <button onClick={handleLogin} className="bg-green-500 text-white px-3 py-1 rounded">
+            <button
+              onClick={handleLogin}
+              className="bg-green-500 text-white px-3 py-1 rounded"
+            >
               Login
             </button>
           )}
         </div>
       </div>
 
+      {/* Input */}
       <div className="flex mb-4">
         <input
           type="text"
-          placeholder="Ask me to search (e.g. 'search devops'), like, comment, or recommend..."
+          placeholder="Ask me to search, like, comment, or recommend..."
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           className="border rounded-l px-4 py-2 flex-1"
         />
         <button
-          onClick={() => {
-            if (!user) {
-              alert("Please login to perform this action");
-              return;
-            }
-            handleSend();
-          }}
+          onClick={handleSend}
           className="bg-blue-500 text-white px-4 py-2 rounded-r"
         >
           Send
         </button>
       </div>
 
+      {/* Status */}
       {status && <p className="text-green-600 mb-4">{status}</p>}
 
+      {/* Video results */}
       {videos.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {videos.map((video, i) => (
