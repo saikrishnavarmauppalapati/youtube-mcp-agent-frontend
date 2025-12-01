@@ -69,7 +69,7 @@ export default function HomePage() {
       {videos && videos.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {videos
-            .filter((video) => video.videoId) // only render valid videos
+            .filter((video) => video && video.videoId) // only render valid videos
             .map((video) => (
               <VideoCard key={video.videoId} video={video} />
             ))}
