@@ -4,16 +4,23 @@ import { useState, useEffect } from "react";
 import { callAgent, getLoginUrl, logoutUser, getUserProfile } from "../lib/api";
 import VideoCard from "../components/VideoCard";
 
+interface User {
+  name: string;
+  picture?: string;
+  email?: string;
+}
+
 export default function HomePage() {
   const [message, setMessage] = useState("");
-  const [videos, setVideos] = useState([]);
+  const [videos, setVideos] = useState<any[]>([]);
   const [status, setStatus] = useState("");
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null); // <-- Proper type
 
+  // Fetch user profile on load
   useEffect(() => {
     async function fetchUser() {
       const profile = await getUserProfile();
-      setUser(profile);
+      if (profile) setUser(profile);
     }
     fetchUser();
   }, []);
@@ -132,3 +139,4 @@ export default function HomePage() {
     </div>
   );
 }
+
