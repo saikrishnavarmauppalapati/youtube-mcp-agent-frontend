@@ -1,4 +1,8 @@
+"use client"; // Add this
+
 export default function VideoCard({ video }) {
+  if (!video) return null;
+
   return (
     <div className="border rounded shadow p-2">
       <img src={video.thumbnail} alt={video.title} className="w-full rounded" />
