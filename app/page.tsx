@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { callAgent, getLoginUrl, logoutUser, getUserProfile } from "../lib/api";
 import VideoCard from "../components/VideoCard";
@@ -9,7 +10,6 @@ export default function HomePage() {
   const [status, setStatus] = useState("");
   const [user, setUser] = useState(null);
 
-  // Fetch user profile on load
   useEffect(() => {
     async function fetchUser() {
       const profile = await getUserProfile();
@@ -30,7 +30,7 @@ export default function HomePage() {
   };
 
   const handleSend = async () => {
-    if (!message) return;
+    if (!message.trim()) return;
     setStatus("Processing...");
     setVideos([]);
 
@@ -62,11 +62,19 @@ export default function HomePage() {
 
   return (
     <div className="container mx-auto p-4">
+      {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">YouTube MCP AI Agent</h1>
-        <div>
+        <div className="flex items-center gap-2">
           {user ? (
-            <div className="flex items-center gap-2">
+            <>
+              {user.picture && (
+                <img
+                  src={user.picture}
+                  className="w-8 h-8 rounded-full"
+                  alt="profile"
+                />
+              )}
               <span className="font-semibold">{user.name}</span>
               <button
                 onClick={handleLogout}
@@ -74,7 +82,7 @@ export default function HomePage() {
               >
                 Logout
               </button>
-            </div>
+            </>
           ) : (
             <button
               onClick={handleLogin}
@@ -86,6 +94,7 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Input */}
       <div className="flex mb-4">
         <input
           type="text"
@@ -108,8 +117,10 @@ export default function HomePage() {
         </button>
       </div>
 
+      {/* Status */}
       {status && <p className="text-green-600 mb-4">{status}</p>}
 
+      {/* Video Grid */}
       {videos.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {videos.map((video, index) => {
