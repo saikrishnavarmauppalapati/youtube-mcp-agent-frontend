@@ -2,13 +2,13 @@
 
 export const API_URL = "https://mcp-youtube-agent-xw94.onrender.com";
 
-export async function callAgent(message, token) {
+export async function callAgent(message: string, token?: string) {
   try {
     const res = await fetch(`${API_URL}/agent/run`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(token ? { Authorization: token } : {}),
       },
       body: JSON.stringify({ message }),
     });
