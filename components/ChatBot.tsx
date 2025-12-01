@@ -60,9 +60,14 @@ export default function ChatBox() {
   }
 
   async function handleLogin() {
-    const { url } = await getLoginUrl();
-    window.location.href = url;
+  const { auth_url } = await getLoginUrl();
+  if (auth_url) {
+    window.location.href = auth_url;
+  } else {
+    alert("Login URL not available. Check backend.");
   }
+}
+
 
   async function handleLogout() {
     await logoutUser();
