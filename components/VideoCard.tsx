@@ -1,10 +1,9 @@
 "use client";
 
-import { callAgent, getUserProfile } from "../lib/api";
+import { callAgent } from "../lib/api";
 
-export default function VideoCard({ video }: { video: any }) {
+export default function VideoCard({ video, user }: { video: any; user: any }) {
   async function handleAction(action: string) {
-    const user = await getUserProfile();
     if (!user) {
       alert("Please login to perform this action");
       return;
@@ -27,7 +26,9 @@ export default function VideoCard({ video }: { video: any }) {
         return;
     }
 
-    const res = await callAgent(command);
+    const token = `Bearer ${user.access_token}`;
+    const res = await callAgent(command, token);
+
     if (res.error) {
       alert(res.error);
     } else {
