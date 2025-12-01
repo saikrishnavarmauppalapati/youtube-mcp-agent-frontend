@@ -2,8 +2,24 @@
 
 export const API_URL = "https://mcp-youtube-agent-xw94.onrender.com";
 
-// Call AI agent
-export async function callAgent(message: string, token?: string) {
+// ---- Types ----
+export interface User {
+  name?: string;
+  email?: string;
+  picture?: string;
+  access_token?: string;
+}
+
+export interface AgentResponse {
+  results?: any[];
+  status?: string;
+  response?: string;
+  error?: string;
+  details?: string;
+}
+
+// ---- API functions ----
+export async function callAgent(message: string, token?: string): Promise<AgentResponse> {
   try {
     const res = await fetch(`${API_URL}/agent/run`, {
       method: "POST",
@@ -20,21 +36,25 @@ export async function callAgent(message: string, token?: string) {
   }
 }
 
-// OAuth login
-export async function getLoginUrl() {
+export async function getLoginUrl(): Promise<{ auth_url?: string }> {
   const res = await fetch(`${API_URL}/auth/login`);
   return await res.json();
 }
 
-// Logout user
-export async function logoutUser() {
+export async function logoutUser(): Promise<{ status: string }> {
   const res = await fetch(`${API_URL}/auth/logout`, { method: "POST" });
   return await res.json();
 }
 
-// Get logged-in user profile
-export async function getUserProfile() {
+export async function getUserProfile(): Promise<User | null> {
   const res = await fetch(`${API_URL}/auth/me`);
   if (res.status === 401) return null;
-  return await res.json();
+
+  const data = await res.json();
+  return {
+    name: data.name,
+    email: data.email,
+    picture: data.picture,
+    access_token: (data as any).access_token || undefined,
+  };
 }
