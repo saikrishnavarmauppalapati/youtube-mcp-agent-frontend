@@ -4,19 +4,12 @@ import { useState, useEffect } from "react";
 import { callAgent, getLoginUrl, logoutUser, getUserProfile } from "../lib/api";
 import VideoCard from "../components/VideoCard";
 
-interface User {
-  name: string;
-  picture?: string;
-  email?: string;
-}
-
 export default function HomePage() {
   const [message, setMessage] = useState("");
   const [videos, setVideos] = useState<any[]>([]);
   const [status, setStatus] = useState("");
-  const [user, setUser] = useState<User | null>(null); // <-- Proper type
+  const [user, setUser] = useState<any>(null);
 
-  // Fetch user profile on load
   useEffect(() => {
     async function fetchUser() {
       const profile = await getUserProfile();
@@ -42,7 +35,8 @@ export default function HomePage() {
     setVideos([]);
 
     try {
-      const data = await callAgent(message);
+      const token = `Bearer ${user.access_token}`;
+      const data = await callAgent(message, token);
 
       if (data.error) {
         alert(data.error);
@@ -69,7 +63,6 @@ export default function HomePage() {
 
   return (
     <div className="container mx-auto p-4">
-      {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">YouTube MCP AI Agent</h1>
         <div className="flex items-center gap-2">
@@ -101,7 +94,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Input */}
       <div className="flex mb-4">
         <input
           type="text"
@@ -124,19 +116,15 @@ export default function HomePage() {
         </button>
       </div>
 
-      {/* Status */}
       {status && <p className="text-green-600 mb-4">{status}</p>}
 
-      {/* Video Grid */}
       {videos.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {videos.map((video, index) => {
-            if (!video || !video.videoId) return null;
-            return <VideoCard key={video.videoId || index} video={video} />;
-          })}
+          {videos.map((video, index) => (
+            <VideoCard key={video.videoId || index} video={video} user={user} />
+          ))}
         </div>
       )}
     </div>
   );
 }
-
