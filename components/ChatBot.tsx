@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  fetchVideos,
+  callAgent,
   likeVideo,
   commentVideo,
   subscribeChannel,
@@ -27,23 +27,14 @@ export default function ChatBot({ onSearch, onActionResult }: ChatBotProps) {
 
   async function handleSend() {
     if (!input.trim()) return;
-
     const text = input.trim();
     addMessage("user", text);
 
-    // --- commands ---
-    if (text.startsWith("search ")) {
-      const query = text.replace("search ", "");
-      onSearch(query);
-      addMessage("bot", `Searching for "${query}"...`);
-      setInput("");
-      return;
-    }
-
+    // Check for frontend commands
     if (text.startsWith("like ")) {
       const id = text.replace("like ", "");
       const r = await likeVideo(id);
-      onActionResult(r.message || "Done");
+      onActionResult(r.status || "Liked");
       addMessage("bot", "Liked the video!");
       setInput("");
       return;
@@ -53,7 +44,7 @@ export default function ChatBot({ onSearch, onActionResult }: ChatBotProps) {
       const [, id, ...rest] = text.split(" ");
       const comment = rest.join(" ");
       const r = await commentVideo(id, comment);
-      onActionResult(r.message || "Comment added");
+      onActionResult(r.status || "Commented");
       addMessage("bot", "Comment posted!");
       setInput("");
       return;
@@ -62,15 +53,15 @@ export default function ChatBot({ onSearch, onActionResult }: ChatBotProps) {
     if (text.startsWith("subscribe ")) {
       const id = text.replace("subscribe ", "");
       const r = await subscribeChannel(id);
-      onActionResult(r.message || "Subscribed");
-      addMessage("bot", "Subscribed to channel!");
+      onActionResult(r.status || "Subscribed");
+      addMessage("bot", "Subscribed!");
       setInput("");
       return;
     }
 
     if (text === "login") {
-      const { url } = await getLoginUrl();
-      window.location.href = url;
+      const { auth_url } = await getLoginUrl();
+      window.location.href = auth_url;
       return;
     }
 
@@ -80,7 +71,24 @@ export default function ChatBot({ onSearch, onActionResult }: ChatBotProps) {
       return;
     }
 
-    addMessage("bot", `I did not understand: "${text}"`);
+    // Everything else → send to AI agent
+    try {
+      const response = await callAgent(text);
+      if (response.results) {
+        onSearch(response.results);
+        addMessage("bot", "Here are some video results.");
+      } else if (response.status) {
+        addMessage("bot", response.status);
+      } else if (response.error) {
+        addMessage("bot", response.error);
+      } else {
+        addMessage("bot", "I did not understand your request.");
+      }
+    } catch (err) {
+      console.error(err);
+      addMessage("bot", "Error communicating with AI agent.");
+    }
+
     setInput("");
   }
 
