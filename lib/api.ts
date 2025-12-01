@@ -2,6 +2,7 @@
 
 export const API_URL = "https://mcp-youtube-agent-xw94.onrender.com";
 
+// Call AI agent
 export async function callAgent(message: string, token?: string) {
   try {
     const res = await fetch(`${API_URL}/agent/run`, {
@@ -19,16 +20,19 @@ export async function callAgent(message: string, token?: string) {
   }
 }
 
+// OAuth login
 export async function getLoginUrl() {
   const res = await fetch(`${API_URL}/auth/login`);
   return await res.json();
 }
 
+// Logout user
 export async function logoutUser() {
   const res = await fetch(`${API_URL}/auth/logout`, { method: "POST" });
   return await res.json();
 }
 
+// Get logged-in user profile
 export async function getUserProfile() {
   const res = await fetch(`${API_URL}/auth/me`);
   if (res.status === 401) return null;
