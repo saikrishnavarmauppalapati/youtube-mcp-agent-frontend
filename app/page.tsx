@@ -5,13 +5,14 @@ import VideoCard from "../components/VideoCard";
 
 export default function HomePage() {
   const [message, setMessage] = useState("");
-  const [videos, setVideos] = useState([]);
+  const [videos, setVideos] = useState<any[]>([]);
   const [status, setStatus] = useState("");
 
   const handleSend = async () => {
-    if (!message) return;
+    if (!message.trim()) return;
     setStatus("Processing...");
     setVideos([]);
+
     try {
       const data = await callAgent(message);
       setStatus("");
@@ -58,14 +59,15 @@ export default function HomePage() {
 
       {status && <p className="text-green-600 mb-4">{status}</p>}
 
-      {Array.isArray(videos) && videos.length > 0 ? (
+      {Array.isArray(videos) && videos.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {videos.map((video, index) => {
-            if (!video || !video.videoId) return null;
-            return <VideoCard key={video.videoId || index} video={video} />;
-          })}
+          {videos.map((video, index) =>
+            video && video.videoId ? (
+              <VideoCard key={video.videoId} video={video} />
+            ) : null
+          )}
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
