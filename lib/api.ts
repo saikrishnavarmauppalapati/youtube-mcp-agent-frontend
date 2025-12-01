@@ -19,22 +19,28 @@ export interface AgentResponse {
 }
 
 // ---- API functions ----
-export async function callAgent(message: string, token?: string): Promise<AgentResponse> {
+export async function callAgent(message: string, token?: string) {
   try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (token) {
+      headers["Authorization"] = token;
+    }
+
     const res = await fetch(`${API_URL}/agent/run`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: token } : {}),
-      },
+      headers,
       body: JSON.stringify({ message }),
     });
+
     return await res.json();
   } catch (err) {
     console.error("Agent API error:", err);
     return { error: "Failed to call agent" };
   }
 }
+
 
 export async function getLoginUrl(): Promise<{ auth_url?: string }> {
   const res = await fetch(`${API_URL}/auth/login`);
