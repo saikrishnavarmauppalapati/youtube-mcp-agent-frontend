@@ -1,8 +1,16 @@
-"use client"; // Add this
+"use client";
 
-export default function VideoCard({ video }) {
-  if (!video) return null;
+interface VideoCardProps {
+  video: {
+    title: string;
+    videoId: string;
+    channelId: string;
+    description: string;
+    thumbnail: string;
+  };
+}
 
+export default function VideoCard({ video }: VideoCardProps) {
   return (
     <div className="border rounded shadow p-2">
       <img src={video.thumbnail} alt={video.title} className="w-full rounded" />
