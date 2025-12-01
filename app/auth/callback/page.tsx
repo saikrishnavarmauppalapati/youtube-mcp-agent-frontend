@@ -2,53 +2,41 @@
 
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
 
-function OAuthCallbackPage() {
+export default function OAuthCallback() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   useEffect(() => {
     const code = searchParams.get("code");
     if (!code) {
-      // No code? Go back home
-      router.replace("/");
+      router.push("/");
       return;
     }
 
-    async function handleOAuth() {
+    async function completeOAuth() {
       try {
-        // Send code to backend
+        // send auth code to backend which will exchange for access_token
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/callback?code=${code}`
+          `https://mcp-youtube-agent-xw94.onrender.com/auth/callback?code=${encodeURIComponent(code)}`
         );
-
         const data = await res.json();
 
-        // Save token in localStorage
         if (data.token?.access_token) {
+          // save token to localStorage for future calls from frontend
           localStorage.setItem("access_token", data.token.access_token);
         }
 
-        // Redirect to home page
+        // navigate home
         router.replace("/");
-
       } catch (err) {
         console.error("OAuth callback error:", err);
-        router.replace("/"); // fallback to home
+        router.replace("/");
       }
     }
 
-    handleOAuth();
+    completeOAuth();
   }, [searchParams, router]);
 
-  return <div>Logging you in, please wait...</div>;
-}
-
-export default function Page() {
-  return (
-    <Suspense fallback={<div style={{ padding: 20 }}>Processing login...</div>}>
-      <OAuthCallbackPage />
-    </Suspense>
-  );
+  return <div className="p-6">Logging you in... please wait.</div>;
 }
